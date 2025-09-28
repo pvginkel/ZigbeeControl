@@ -44,7 +44,8 @@ def tabs_config_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def app(tabs_config_path: Path):
+def app(tabs_config_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("APP_ALLOWED_ORIGINS", raising=False)
     flask_app = create_app(config_path=str(tabs_config_path))
     flask_app.testing = True
     return flask_app

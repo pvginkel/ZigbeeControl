@@ -57,3 +57,4 @@ This document distills the current product brief so agents and contributors stay
 3. Implement frontend tab mechanics and SSE handling with matching UI states.
 4. Verify end-to-end restart flow (happy path and timeout). Document any manual steps for the operator.
 5. Keep documentation synchronized with config changes or new behaviours.
+6. Run project commands through Poetry (e.g. `poetry run pytest`, `poetry run flask --help`).
