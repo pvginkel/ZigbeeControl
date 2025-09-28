@@ -1,11 +1,6 @@
 tabs:
-  - text: Code Server
-    iconUrl: http://10.1.2.4/_static/src/browser/media/favicon-dark-support.svg
-    iframeUrl: /code/
-    proxyTarget: http://10.1.2.4/
-    tabColor: '#333333'
   - text: Zigbee2MQTT - 1
-    iconUrl: http://z2m1/assets/favicon-96x96-BP9bzx2f.png
+    iconUrl: /logo-z2m.png
     iframeUrl: /z2m1/
     proxyTarget: http://z2m1/z2m1/
     tabColor: '#191e24'
@@ -13,10 +8,15 @@ tabs:
       namespace: zigbee2mqtt
       deployment: zigbee2mqtt1
   - text: Zigbee2MQTT - 2
-    iconUrl: http://z2m1/assets/favicon-96x96-BP9bzx2f.png
+    iconUrl: /logo-z2m.png
     iframeUrl: /z2m2/
     proxyTarget: http://z2m2/z2m2/
     tabColor: '#191e24'
     k8s:
       namespace: zigbee2mqtt
       deployment: zigbee2mqtt2
+  - text: Code Server
+    iconUrl: /logo-vscode.png
+    iframeUrl: /code/
+    proxyTarget: http://10.1.2.4/
+    tabColor: '#333333'
