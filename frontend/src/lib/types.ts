@@ -10,6 +10,7 @@ export interface TabConfig {
   iconUrl: string
   iframeUrl: string
   k8s?: K8sInfo
+  restartable?: boolean
 }
 
 export interface UiTabConfig extends TabConfig {

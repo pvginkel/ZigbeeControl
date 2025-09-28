@@ -9,7 +9,7 @@ interface ConfigQueryResult {
 function normalizeConfig(response: ConfigResponse): ConfigQueryResult {
   const tabs: UiTabConfig[] = response.tabs.map((tab) => ({
     ...tab,
-    isRestartable: Boolean(tab.k8s),
+    isRestartable: tab.restartable ?? Boolean(tab.k8s),
   }))
 
   return { tabs }

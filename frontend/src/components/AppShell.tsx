@@ -99,6 +99,7 @@ export default function AppShell({ tabs }: AppShellProps) {
             index={index}
             isActive={index === activeIndex}
             isMounted={Boolean(mounted[index])}
+            status={statuses[index]}
           />
         ))}
       </div>

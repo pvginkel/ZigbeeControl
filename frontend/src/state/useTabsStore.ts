@@ -20,15 +20,21 @@ export const useTabsStore = create<TabsState>((set) => ({
   initialize: (tabs) => {
     set(() => {
       const initialStatuses: StatusMap = {}
+      const initialMounted: Record<number, boolean> = {}
+
       tabs.forEach((tab, index) => {
         if (tab.isRestartable) {
           initialStatuses[index] = 'running'
         }
       })
 
+      if (tabs.length > 0) {
+        initialMounted[0] = true
+      }
+
       return {
         activeIndex: 0,
-        mounted: tabs.length > 0 ? { 0: true } : {},
+        mounted: initialMounted,
         statuses: initialStatuses,
       }
     })
