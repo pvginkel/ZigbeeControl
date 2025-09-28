@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { useRestartMutation } from '../hooks/useRestartMutation'
 import type { TabStatus } from '../lib/types'
 
@@ -8,19 +8,9 @@ interface RestartButtonProps {
   label: string
 }
 
-function RestartGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M10 3a7 7 0 0 1 4.77 1.87l1.37-1.37V8h-4.5l1.7-1.7A4.5 4.5 0 1 0 14.5 12H16a6 6 0 1 1-6-9z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-}
-
 export default function RestartButton({ tabIndex, status, label }: RestartButtonProps) {
   const { mutate, isPending } = useRestartMutation(tabIndex)
+  const [isHovering, setIsHovering] = useState(false)
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
@@ -28,7 +18,23 @@ export default function RestartButton({ tabIndex, status, label }: RestartButton
     mutate()
   }
 
+  const handleHoverChange = (hovering: boolean) => {
+    setIsHovering(hovering)
+  }
+
   const disabled = status === 'restarting' || isPending
+
+  useEffect(() => {
+    if (disabled) {
+      setIsHovering(false)
+    }
+  }, [disabled])
+
+  const iconName = status === 'error'
+    ? 'exclamation'
+    : status === 'restarting' || (isHovering && !disabled)
+      ? 'cached'
+      : 'play_arrow'
 
   return (
     <button
@@ -37,9 +43,14 @@ export default function RestartButton({ tabIndex, status, label }: RestartButton
       aria-label={`Restart ${label}`}
       aria-disabled={disabled}
       onClick={handleClick}
+      onMouseEnter={() => handleHoverChange(true)}
+      onMouseLeave={() => handleHoverChange(false)}
+      onFocus={() => handleHoverChange(true)}
+      onBlur={() => handleHoverChange(false)}
       disabled={disabled}
+      data-status={status}
     >
-      <RestartGlyph />
+      <span className="restart-button__icon material-icon" aria-hidden="true">{iconName}</span>
     </button>
   )
 }
