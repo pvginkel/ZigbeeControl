@@ -1,26 +1,32 @@
 [build-system]
-requires = ["setuptools>=67.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "z2m-wrapper-backend"
+packages = [{ include = "app" }]
 version = "0.1.0"
 description = "Flask backend for the Z2M Wrapper project"
-requires-python = ">=3.10"
-license = {text = "MIT"}
-dependencies = [
-    "Flask>=3.0.0,<4",
-    "pydantic>=2.6.0,<3",
-    "spectree>=1.5.0,<2",
-    "PyYAML>=6.0",
-    "kubernetes>=28.0.0,<29",
-]
+authors = ["Z2M Wrapper Team <ops@example.com>"]
+license = "MIT"
+readme = "README.md"
 
-[project.optional-dependencies]
-test = [
-    "pytest>=7.4",
-    "pytest-mock>=3.12",
-]
+[tool.poetry.dependencies]
+python = ">=3.10"
+Flask = ">=3.0.0,<4"
+pydantic = ">=2.6.0,<3"
+spectree = ">=1.5.0,<2"
+PyYAML = ">=6.0"
+kubernetes = ">=28.0.0,<29"
+python-dotenv = ">=1.0.0,<2"
+waitress = ">=2.1,<3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.4"
+pytest-mock = ">=3.12"
+
+[tool.poetry.scripts]
+z2m-backend = "run:main"
 
 [tool.pytest.ini_options]
 addopts = "-q"

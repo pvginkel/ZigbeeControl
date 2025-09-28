@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+from dotenv import load_dotenv
 from flask import Flask
 from spectree import SpecTree
 
@@ -19,6 +20,8 @@ def create_app(*, config_path: str | None = None) -> Flask:
     """Application factory used by both tests and runtime."""
 
     app = Flask(__name__)
+
+    load_dotenv()
 
     path = config_path or os.environ.get("APP_TABS_CONFIG")
     if not path:
