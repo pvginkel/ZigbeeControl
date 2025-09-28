@@ -18,6 +18,8 @@ class _FakeStatus:
     updated_replicas: int | None = None
     ready_replicas: int | None = None
     replicas: int | None = None
+    observed_generation: int | None = None
+    conditions: list[object] | None = None
 
 
 @dataclass
@@ -27,20 +29,38 @@ class _FakeSpec:
 
 @dataclass
 class _FakeDeployment:
+    metadata: object
     status: _FakeStatus
     spec: _FakeSpec
 
 
+@dataclass
+class _FakeMetadata:
+    generation: int
+
+
+@dataclass
+class _FakeCondition:
+    type: str
+    status: str
+    reason: str | None = None
+    message: str | None = None
+    observed_generation: int | None = None
+
+
 class _FakeAppsApi:
-    def __init__(self, stream_events):
+    def __init__(self, stream_events, status_obj=None):
         self.stream_events = stream_events
         self.patched = []
         self.list_calls = []
+        self.status_obj = status_obj
 
     def patch_namespaced_deployment(self, name: str, namespace: str, body):
         self.patched.append((name, namespace, body))
 
     def read_namespaced_deployment_status(self, name: str, namespace: str):  # pragma: no cover - stub for API parity
+        if self.status_obj is not None:
+            return self.status_obj
         return self.stream_events[-1]["object"] if self.stream_events else None
 
     def list_namespaced_deployment(self, namespace: str, field_selector: str | None = None, **kwargs):
@@ -100,10 +120,95 @@ def _consume(stream, timeout: float = 2.0) -> StatusPayload:
 
 
 def test_restart_success_sets_running():
+    target_generation = 2
+    status_before = _FakeStatus(
+        available_replicas=1,
+        updated_replicas=1,
+        ready_replicas=1,
+        replicas=1,
+        observed_generation=1,
+        conditions=[
+            _FakeCondition(
+                type="Progressing",
+                status="True",
+                reason="NewReplicaSetAvailable",
+                observed_generation=1,
+            )
+        ],
+    )
+    status_after = _FakeStatus(
+        available_replicas=1,
+        updated_replicas=1,
+        ready_replicas=1,
+        replicas=1,
+        observed_generation=target_generation,
+        conditions=[
+            _FakeCondition(
+                type="Progressing",
+                status="True",
+                reason="NewReplicaSetAvailable",
+                observed_generation=target_generation,
+            ),
+            _FakeCondition(
+                type="Available",
+                status="True",
+                observed_generation=target_generation,
+            ),
+        ],
+    )
+    status_mid = _FakeStatus(
+        available_replicas=0,
+        updated_replicas=0,
+        ready_replicas=0,
+        replicas=1,
+        observed_generation=target_generation,
+        conditions=[
+            _FakeCondition(
+                type="Progressing",
+                status="True",
+                reason="ReplicaSetUpdated",
+                observed_generation=target_generation,
+            ),
+            _FakeCondition(
+                type="Available",
+                status="False",
+                reason="MinimumReplicasUnavailable",
+                message="Deployment does not have minimum availability.",
+                observed_generation=target_generation,
+            ),
+        ],
+    )
     events = [
-        {"object": _FakeDeployment(status=_FakeStatus(available_replicas=1, updated_replicas=1, ready_replicas=1), spec=_FakeSpec(replicas=1))}
+        {
+            "object": _FakeDeployment(
+                metadata=_FakeMetadata(generation=target_generation),
+                status=status_before,
+                spec=_FakeSpec(replicas=1),
+            )
+        },
+        {
+            "object": _FakeDeployment(
+                metadata=_FakeMetadata(generation=target_generation),
+                status=status_mid,
+                spec=_FakeSpec(replicas=1),
+            )
+        },
+        {
+            "object": _FakeDeployment(
+                metadata=_FakeMetadata(generation=target_generation),
+                status=status_after,
+                spec=_FakeSpec(replicas=1),
+            )
+        },
     ]
-    apps_api = _FakeAppsApi(events)
+    apps_api = _FakeAppsApi(
+        events,
+        status_obj=_FakeDeployment(
+            metadata=_FakeMetadata(generation=target_generation),
+            status=status_before,
+            spec=_FakeSpec(replicas=1),
+        ),
+    )
     broadcaster = StatusBroadcaster(1)
     watcher = _FakeWatch(events)
     service = KubernetesService(
@@ -140,7 +245,14 @@ def test_restart_success_sets_running():
 
 def test_restart_timeout_emits_error():
     events: list[dict] = []
-    apps_api = _FakeAppsApi(events)
+    apps_api = _FakeAppsApi(
+        events,
+        status_obj=_FakeDeployment(
+            metadata=_FakeMetadata(generation=1),
+            status=_FakeStatus(observed_generation=0),
+            spec=_FakeSpec(replicas=1),
+        ),
+    )
     broadcaster = StatusBroadcaster(1)
     watcher = _FakeWatch(events)
     service = KubernetesService(

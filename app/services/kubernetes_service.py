@@ -104,8 +104,8 @@ class KubernetesService:
         )
 
         try:
-            self._trigger_restart(namespace, deployment)
-            self._wait_for_rollout(namespace, deployment)
+            generation = self._trigger_restart(namespace, deployment)
+            self._wait_for_rollout(namespace, deployment, generation)
         except RestartTimeout as timeout_exc:
             logger.error(
                 "Restart timed out for deployment %s/%s after %ss",
@@ -149,7 +149,7 @@ class KubernetesService:
                 "Worker finished for deployment %s/%s", namespace, deployment
             )
 
-    def _trigger_restart(self, namespace: str, deployment: str) -> None:
+    def _trigger_restart(self, namespace: str, deployment: str) -> int:
         timestamp = datetime.now(timezone.utc).isoformat()
         body = {
             "spec": {
@@ -198,17 +198,62 @@ class KubernetesService:
                 deployment=deployment,
             ) from exc
 
-    def _wait_for_rollout(self, namespace: str, deployment: str) -> None:
+        try:
+            deployment_obj = self._apps_api.read_namespaced_deployment_status(  # type: ignore[attr-defined]
+                name=deployment,
+                namespace=namespace,
+            )
+        except ApiException as exc:
+            logger.exception(
+                "Unable to read deployment status %s/%s after restart trigger",
+                namespace,
+                deployment,
+            )
+            raise RestartFailed(
+                f"failed to read deployment status: {getattr(exc, 'reason', exc.status)}",
+                namespace=namespace,
+                deployment=deployment,
+            ) from exc
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception(
+                "Unexpected error reading deployment status for %s/%s",
+                namespace,
+                deployment,
+            )
+            raise RestartFailed(
+                f"unexpected error reading deployment status: {exc}",
+                namespace=namespace,
+                deployment=deployment,
+            ) from exc
+
+        generation = self._extract_generation(deployment_obj)
+        if generation is None:
+            raise RestartFailed(
+                "unable to determine deployment generation",
+                namespace=namespace,
+                deployment=deployment,
+            )
+
+        logger.debug(
+            "Restart triggered for %s/%s targeting generation %s",
+            namespace,
+            deployment,
+            generation,
+        )
+        return generation
+
+    def _wait_for_rollout(self, namespace: str, deployment: str, target_generation: int) -> None:
         deadline = time.monotonic() + self._restart_timeout
         field_selector = f"metadata.name={deployment}"
         watcher = self._watch_factory()
         timeout_seconds = max(1, int(self._restart_timeout))
         logger.debug(
-            "Watching rollout status for deployment %s/%s (timeout=%ss, selector=%s)",
+            "Watching rollout status for deployment %s/%s (timeout=%ss, selector=%s, targetGeneration=%s)",
             namespace,
             deployment,
             self._restart_timeout,
             field_selector,
+            target_generation,
         )
         try:
             stream = watcher.stream(
@@ -220,9 +265,23 @@ class KubernetesService:
             )
             for event in stream:
                 obj = self._extract_deployment_from_event(event)
-                if obj and self._deployment_ready(obj):
+                if not obj:
+                    continue
+
+                failure_message = self._detect_rollout_failure(obj, target_generation)
+                if failure_message:
+                    raise RestartFailed(
+                        failure_message,
+                        namespace=namespace,
+                        deployment=deployment,
+                    )
+
+                if self._deployment_ready(obj, target_generation):
                     logger.debug(
-                        "Deployment %s/%s reports ready state", namespace, deployment
+                        "Deployment %s/%s generation %s reports ready state",
+                        namespace,
+                        deployment,
+                        target_generation,
                     )
                     return
                 if time.monotonic() >= deadline:
@@ -263,33 +322,112 @@ class KubernetesService:
         return obj
 
     @staticmethod
-    def _deployment_ready(obj: object) -> bool:
-        status = getattr(obj, "status", None)
-        spec = getattr(obj, "spec", None)
-        desired = getattr(spec, "replicas", None)
-        available = getattr(status, "available_replicas", None)
-        updated = getattr(status, "updated_replicas", None)
-        ready = getattr(status, "ready_replicas", None)
+    def _deployment_ready(obj: object, target_generation: int) -> bool:
+        metadata = KubernetesService._get_field(obj, "metadata")
+        status = KubernetesService._get_field(obj, "status")
+        spec = KubernetesService._get_field(obj, "spec")
 
-        if desired is None:
-            desired = getattr(status, "replicas", None)
-        if desired is None:
-            # No replica count to compare against; rely on ready pods info when available.
-            return bool(ready or available)
-
-        try:
-            desired_val = int(desired)
-        except (TypeError, ValueError):
+        if status is None:
             return False
 
-        checks = []
-        for value in (available, updated, ready):
-            if value is None:
-                continue
-            try:
-                if int(value) < desired_val:
-                    return False
-                checks.append(True)
-            except (TypeError, ValueError):
+        observed_generation = KubernetesService._get_int_field(
+            status, "observed_generation", "observedGeneration"
+        )
+        if observed_generation is None or observed_generation < target_generation:
+            return False
+
+        desired = KubernetesService._get_int_field(spec, "replicas")
+        if desired is None:
+            desired = KubernetesService._get_int_field(status, "replicas")
+
+        ready = KubernetesService._get_int_field(status, "ready_replicas", "readyReplicas")
+        available = KubernetesService._get_int_field(
+            status, "available_replicas", "availableReplicas"
+        )
+        updated = KubernetesService._get_int_field(status, "updated_replicas", "updatedReplicas")
+
+        if desired is None:
+            if ready is None and available is None:
                 return False
-        return bool(checks)
+        else:
+            for value in (ready, available, updated):
+                if value is None or value < desired:
+                    return False
+
+        if metadata is not None:
+            generation = KubernetesService._get_int_field(metadata, "generation")
+            if generation is not None and generation > observed_generation:
+                return False
+
+        conditions = KubernetesService._get_field(status, "conditions") or []
+        for condition in conditions:
+            cond_type = KubernetesService._get_field(condition, "type")
+            if cond_type != "Available":
+                continue
+            cond_status = KubernetesService._get_field(condition, "status")
+            if str(cond_status).lower() != "true":
+                return False
+            cond_gen = KubernetesService._get_int_field(
+                condition, "observed_generation", "observedGeneration"
+            )
+            if cond_gen is None or cond_gen >= target_generation:
+                return True
+        # Fallback to counts when no conditions reported.
+        return bool((ready and ready > 0) or (available and available > 0))
+
+    @staticmethod
+    def _detect_rollout_failure(obj: object, target_generation: int) -> str | None:
+        status = KubernetesService._get_field(obj, "status")
+        if status is None:
+            return None
+
+        conditions = KubernetesService._get_field(status, "conditions") or []
+        for condition in conditions:
+            cond_type = KubernetesService._get_field(condition, "type")
+            if cond_type not in {"Progressing", "Available"}:
+                continue
+            cond_status = str(KubernetesService._get_field(condition, "status") or "").lower()
+            cond_reason = KubernetesService._get_field(condition, "reason")
+            cond_message = KubernetesService._get_field(condition, "message")
+            cond_gen = KubernetesService._get_int_field(
+                condition, "observed_generation", "observedGeneration"
+            )
+
+            if cond_gen is not None and cond_gen < target_generation:
+                continue
+
+            if cond_type == "Progressing" and cond_status == "false":
+                reason = cond_reason or "rollout halted"
+                if cond_reason == "ProgressDeadlineExceeded":
+                    reason = "progress deadline exceeded"
+                message = cond_message or reason
+                return f"deployment rollout failed: {message}"
+
+        return None
+
+    @staticmethod
+    def _get_field(obj: object | None, *names: str) -> Any | None:
+        if obj is None:
+            return None
+        for name in names:
+            value = getattr(obj, name, None)
+            if value is not None:
+                return value
+            if isinstance(obj, dict) and name in obj:
+                return obj[name]
+        return None
+
+    @staticmethod
+    def _get_int_field(obj: object | None, *names: str) -> int | None:
+        value = KubernetesService._get_field(obj, *names)
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _extract_generation(obj: object) -> int | None:
+        metadata = KubernetesService._get_field(obj, "metadata")
+        return KubernetesService._get_int_field(metadata, "generation")

@@ -46,7 +46,6 @@ def configure_cors(app: Flask, allowed_origins: Sequence[str]) -> None:
         return
 
     def _apply_headers(response: Response) -> Response:
-        logger.info("APPLY HEADERS")
         origin = request.headers.get("Origin")
         if allow_all:
             response.headers["Access-Control-Allow-Origin"] = "*"
