@@ -55,8 +55,6 @@ export default function TabContent({ tab, index, isActive, isMounted, status }: 
           title={tab.text}
           src={tab.iframeUrl}
           className="tab-panel__iframe"
-          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts"
         />
       ) : null}
     </div>

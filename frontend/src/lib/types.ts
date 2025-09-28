@@ -9,6 +9,7 @@ export interface TabConfig {
   text: string
   iconUrl: string
   iframeUrl: string
+  proxyTarget?: string
   k8s?: K8sInfo
   restartable?: boolean
 }
