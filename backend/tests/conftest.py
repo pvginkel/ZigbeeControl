@@ -31,9 +31,11 @@ def tabs_config_path(tmp_path: Path) -> Path:
               - text: Primary Dashboard
                 iconUrl: https://example.com/icon-a.svg
                 iframeUrl: https://example.com/dashboard
+                tabColor: "#123456"
               - text: Code Server
                 iconUrl: https://example.com/icon-b.svg
                 iframeUrl: https://example.com/code
+                tabColor: "#654321"
                 k8s:
                   namespace: default
                   deployment: code-server
