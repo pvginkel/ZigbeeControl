@@ -42,8 +42,8 @@ class ConfigService:
                 iconUrl=tab.iconUrl,
                 iframeUrl=tab.iframeUrl,
                 restartable=tab.k8s is not None,
+                tabColor=tab.tabColor,
             )
             for tab in self._tabs
         ]
         return ConfigResponse(tabs=tabs)
-
