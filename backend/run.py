@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import logging
 
 from app import create_app
 
@@ -22,6 +23,11 @@ def _resolve_env() -> str:
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+    
     app = create_app()
 
     host = os.getenv("Z2M_BACKEND_HOST", "0.0.0.0")

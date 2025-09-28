@@ -1,0 +1,16 @@
+tabs:
+  - text: Code Server
+    iconUrl: http://10.1.2.4/_static/src/browser/media/favicon-dark-support.svg
+    iframeUrl: http://10.1.2.4/
+  - text: Zigbee2MQTT - 1
+    iconUrl: http://z2m1/assets/favicon-96x96-BP9bzx2f.png
+    iframeUrl: http://10.1.2.3/
+    k8s:
+      namespace: zigbee2mqtt
+      deployment: zigbee2mqtt1
+  - text: Zigbee2MQTT - 2
+    iconUrl: http://z2m1/assets/favicon-96x96-BP9bzx2f.png
+    iframeUrl: http://10.1.2.2/
+    k8s:
+      namespace: zigbee2mqtt
+      deployment: zigbee2mqtt2
