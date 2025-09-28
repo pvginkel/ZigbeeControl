@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
 import type { TabStatus, UiTabConfig } from '../lib/types'
 
 interface TabContentProps {
@@ -14,6 +15,7 @@ export default function TabContent({ tab, index, isActive, isMounted, status }: 
   const tabId = `tab-${index}`
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const previousStatusRef = useRef<TabStatus | undefined>(undefined)
+  const panelStyle = { '--tab-panel-bg': tab.tabColor ?? '#080b0f' } as CSSProperties
 
   useEffect(() => {
     if (!isMounted) {
@@ -48,6 +50,7 @@ export default function TabContent({ tab, index, isActive, isMounted, status }: 
       tabIndex={isActive ? 0 : -1}
       className={`tab-panel${isActive ? ' tab-panel--active' : ''}`}
       hidden={!isActive}
+      style={panelStyle}
     >
       {isMounted ? (
         <iframe

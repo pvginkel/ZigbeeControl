@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
 import type { UiTabConfig } from '../lib/types'
 import { useTabsStore } from '../state/useTabsStore'
 import TabButton from './TabButton'
@@ -68,6 +68,9 @@ export default function AppShell({ tabs }: AppShellProps) {
     [setActiveIndex],
   )
 
+  const activeTabColor = tabs[activeIndex]?.tabColor ?? '#0f141b'
+  const tabPanelsStyle = { '--tabpanels-bg': activeTabColor } as CSSProperties
+
   return (
     <div className="app-shell">
       <div
@@ -91,7 +94,7 @@ export default function AppShell({ tabs }: AppShellProps) {
           />
         ))}
       </div>
-      <div className="tabpanels">
+      <div className="tabpanels" style={tabPanelsStyle}>
         {tabs.map((tab, index) => (
           <TabContent
             key={`${tab.text}-${index}`}

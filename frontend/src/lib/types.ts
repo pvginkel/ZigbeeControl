@@ -12,6 +12,7 @@ export interface TabConfig {
   proxyTarget?: string
   k8s?: K8sInfo
   restartable?: boolean
+  tabColor?: string
 }
 
 export interface UiTabConfig extends TabConfig {

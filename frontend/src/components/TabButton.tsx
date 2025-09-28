@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { TabStatus, UiTabConfig } from '../lib/types'
 import RestartButton from './RestartButton'
 
@@ -21,9 +22,15 @@ export default function TabButton({
   const tabId = `tab-${index}`
   const panelId = `tabpanel-${index}`
   const tabStatus = status ?? 'running'
+  const tabColor = tab.tabColor ?? '#1c2330'
+  const wrapperStyle = { '--tab-color': tabColor } as CSSProperties
 
   return (
-    <div className={`tab-button-wrapper${isActive ? ' tab-button-wrapper--active' : ''}`} data-status={tabStatus}>
+    <div
+      className={`tab-button-wrapper${isActive ? ' tab-button-wrapper--active' : ''}`}
+      data-status={tabStatus}
+      style={wrapperStyle}
+    >
       <button
         ref={buttonRef}
         id={tabId}
