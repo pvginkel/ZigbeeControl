@@ -1,23 +1,10 @@
 import type { ConfigResponse } from './types'
 
-const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL ?? '/api/')
-
-function normalizeBaseUrl(base: string): string {
-  if (!base) {
-    return '/api/'
-  }
-
-  const trimmed = base.trim()
-  if (trimmed.endsWith('/')) {
-    return trimmed
-  }
-
-  return `${trimmed}/`
-}
+const API_BASE_PATH = '/api/'
 
 function buildUrl(path: string): string {
   const normalizedPath = path.startsWith('/') ? path.slice(1) : path
-  return `${API_BASE_URL}${normalizedPath}`
+  return `${API_BASE_PATH}${normalizedPath}`
 }
 
 const JSON_HEADERS = {

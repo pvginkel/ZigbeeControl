@@ -68,26 +68,21 @@ function createProxyTable(configPath: string | undefined): Record<string, ProxyO
       rewriteWsOrigin: true,
       secure: false,
       rewrite: (incomingPath) => {
-        var result
         if (!incomingPath.startsWith(basePath)) {
-          result = incomingPath
-        } else {
-          const boundaryChar = incomingPath.charAt(basePath.length)
-          if (boundaryChar && boundaryChar !== '/' && boundaryChar !== '?') {
-            result = incomingPath
-          } else {
-            const stripped = incomingPath.slice(basePath.length)
-            if (!stripped) {
-              result = '/'
-            } else {
-              result = stripped.startsWith('/') ? stripped : `/${stripped}`
-            }
-          }
+          return incomingPath
         }
 
-        console.info(`Mapped '${incomingPath}' to '${result}'`);
+        const boundaryChar = incomingPath.charAt(basePath.length)
+        if (boundaryChar && boundaryChar !== '/' && boundaryChar !== '?') {
+          return incomingPath
+        }
 
-        return result
+        const stripped = incomingPath.slice(basePath.length)
+        if (!stripped) {
+          return '/'
+        }
+
+        return stripped.startsWith('/') ? stripped : `/${stripped}`
       },
       headers: {
         'X-Forwarded-Proto': 'http',
@@ -103,13 +98,29 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const configPath = env.APP_TABS_CONFIG
   const proxy = createProxyTable(configPath)
+  const apiProxyTarget = env.API_PROXY_TARGET
 
   if (!configPath) {
-    console.info('[vite] APP_TABS_CONFIG not set; skipping proxy setup')
+    console.info('[vite] APP_TABS_CONFIG not set; skipping iframe proxy setup')
   } else if (Object.keys(proxy).length === 0) {
-    console.info(`[vite] no proxy entries created from APP_TABS_CONFIG at ${configPath}`)
+    console.info(`[vite] no iframe proxy entries created from APP_TABS_CONFIG at ${configPath}`)
   } else {
-    console.info('[vite] proxy entries created from APP_TABS_CONFIG:', proxy)
+    console.info('[vite] iframe proxy entries created from APP_TABS_CONFIG:', proxy)
+  }
+
+  if (apiProxyTarget) {
+    proxy['/api'] = {
+      target: apiProxyTarget,
+      changeOrigin: true,
+      ws: true,
+      secure: false,
+      headers: {
+        'X-Forwarded-Proto': 'http',
+      },
+    }
+    console.info(`[vite] /api requests proxied to ${apiProxyTarget}`)
+  } else {
+    console.info('[vite] API_PROXY_TARGET not set; /api requests will hit Vite directly')
   }
 
   return {
