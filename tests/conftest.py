@@ -9,6 +9,18 @@ import pytest
 from app import create_app
 
 
+@pytest.fixture(autouse=True)
+def _mock_kube_config(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.kubernetes_service.config.load_kube_config",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        "app.services.kubernetes_service.config.load_incluster_config",
+        lambda: None,
+    )
+
+
 @pytest.fixture
 def tabs_config_path(tmp_path: Path) -> Path:
     path = tmp_path / "tabs.yml"
@@ -42,4 +54,3 @@ def app(tabs_config_path: Path):
 def client(app) -> Generator:
     with app.test_client() as client:
         yield client
-
