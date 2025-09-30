@@ -10,6 +10,7 @@ from app.schemas.config import KubernetesConfig, TabConfig
 from app.schemas.status import StatusPayload, StatusState
 from app.services.kubernetes_service import KubernetesService
 from app.services.status_broadcaster import StatusBroadcaster
+from app.utils.sse import HeartbeatEvent
 
 
 @dataclass
@@ -114,9 +115,12 @@ def _consume(stream, timeout: float = 2.0) -> StatusPayload:
         if time.time() > deadline:
             pytest.fail("timed out waiting for status event")
         try:
-            return next(stream)
+            message = next(stream)
         except StopIteration:  # pragma: no cover - defensive
             pytest.fail("status stream terminated unexpectedly")
+        if isinstance(message, HeartbeatEvent):
+            continue
+        return message
 
 
 def test_restart_success_sets_running():

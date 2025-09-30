@@ -33,13 +33,19 @@ def create_api_blueprint(
     status_broadcaster: StatusBroadcaster,
     auth_manager: AuthManager,
     spectree: SpecTree,
+    status_heartbeat_interval: float,
 ) -> Blueprint:
     blueprint = Blueprint("api", __name__, url_prefix="/api")
 
     register_auth_routes(blueprint, auth_manager, spectree)
     register_config_routes(blueprint, config_service, spectree)
     register_restart_routes(blueprint, config_service, kubernetes_service, spectree)
-    register_status_routes(blueprint, config_service, status_broadcaster)
+    register_status_routes(
+        blueprint,
+        config_service,
+        status_broadcaster,
+        heartbeat_interval=status_heartbeat_interval,
+    )
 
     _auth_exempt_endpoints = {"api.login", "api.auth_check"}
 

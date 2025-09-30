@@ -4,7 +4,7 @@ Backend service exposing configuration, restart controls, and status streaming f
 
 ## Running
 
-1. Copy `.env.example` to `.env` and set `APP_TABS_CONFIG`, `APP_AUTH_TOKEN`, network bindings, and `FLASK_ENV` (`development` or `production`). Optionally override `APP_AUTH_COOKIE_NAME` and `APP_SECRET_KEY`.
+1. Copy `.env.example` to `.env` and set `APP_TABS_CONFIG`, `APP_AUTH_TOKEN`, network bindings, and `FLASK_ENV` (`development` or `production`). Optionally override `APP_AUTH_COOKIE_NAME`, `APP_SECRET_KEY`, and `APP_SSE_HEARTBEAT_SECONDS` (defaults: 5 seconds in development, 30 seconds otherwise).
 2. Install dependencies and run:
 
 ```bash
@@ -71,7 +71,7 @@ All endpoints are served under `/api` and return JSON unless noted otherwise.
 
 ### GET `/api/status/<idx>/stream`
 - **Auth:** Requires a valid authentication cookie.
-- **Description:** Server-Sent Events stream that emits status updates for tab `<idx>`.
+- **Description:** Server-Sent Events stream that emits status updates for tab `<idx>`, interleaved with lightweight `event: heartbeat` frames when no state changes occur.
 - **Usage:** Subscribe via an `EventSource` in the browser or any SSE-capable client. Example event payload:
   ```text
   retry: 3000
@@ -80,3 +80,4 @@ All endpoints are served under `/api` and return JSON unless noted otherwise.
 
   ```
 - **Initial behaviour:** The latest known state (`running`, `restarting`, or `error`) is sent immediately upon connection.
+- **Heartbeat:** The backend sends `event: heartbeat` frames every `APP_SSE_HEARTBEAT_SECONDS` (default 5/30 seconds) so intermediaries such as Waitress can notice disconnected clients.
