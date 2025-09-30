@@ -17,7 +17,7 @@ This document distills the current product brief so agents and contributors stay
 - Keep API surface tiny: `POST /api/auth/login`, `GET /api/auth/check`, `GET /api/config`, `POST /api/restart/<idx>`, `GET /api/status/<idx>/stream`.
 - Use Pydantic schemas (Spectree integration) for request/response validation.
 - `KubernetesService` (or equivalent) handles rollout restarts and status watching using the official Python client. Guard against duplicate restarts on the same deployment.
-- SSE streaming helpers should emit `event: status` messages with JSON payloads limited to `running`, `restarting`, or `error` (with optional `message`). Include sensible retry headers (`retry: 3000`).
+- SSE streaming helpers should emit `event: status` messages with JSON payloads limited to `running`, `restarting`, or `error` (with optional `message`) and interleave lightweight `event: heartbeat` frames on a configurable cadence. Include sensible retry headers (`retry: 3000`).
 - Treat restart workflow as optimistic: immediately report `restarting`, observe Kubernetes conditions/pod readiness, then flip to `running` or `error` within ~180 seconds. Timeout should mirror existing script behaviour.
 - Favor clear error propagation-no silent failures. Expose useful context in exceptions that wind up on the SSE or REST responses.
 

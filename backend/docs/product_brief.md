@@ -124,7 +124,7 @@ tabs:
 
 ## 12) Configuration & deployment
 
-* **Env vars:** `APP_TABS_CONFIG` (YAML path), `APP_AUTH_TOKEN` (shared secret), optional `APP_AUTH_COOKIE_NAME`, `APP_SECRET_KEY`, and `APP_AUTH_DISABLED` for local bypass.
+* **Env vars:** `APP_TABS_CONFIG` (YAML path), `APP_AUTH_TOKEN` (shared secret), optional `APP_AUTH_COOKIE_NAME`, `APP_SECRET_KEY`, `APP_AUTH_DISABLED` for local bypass, and `APP_SSE_HEARTBEAT_SECONDS` to control the SSE heartbeat cadence (defaults: 5s dev / 30s prod).
 * **Containerization:** single Docker image for the wrapper (FE built into static assets served by the Flask app or sidecar NGINX—either is fine).
 * **K8s:** one Deployment + Service for the wrapper; you’ll wire Ingress/NGINX.
 

@@ -9,13 +9,18 @@ from app.services.status_broadcaster import StatusBroadcaster
 from app.utils.sse import sse_response
 
 
-def register_status_routes(bp: Blueprint, config_service: ConfigService, broadcaster: StatusBroadcaster) -> None:
+def register_status_routes(
+    bp: Blueprint,
+    config_service: ConfigService,
+    broadcaster: StatusBroadcaster,
+    *,
+    heartbeat_interval: float,
+) -> None:
     """Register status streaming routes on the blueprint."""
 
     @bp.get("/status/<int:idx>/stream")
     def stream_status(idx: int):
         # Ensure the tab index is valid even for non-restartable tabs.
         config_service.get_tab(idx)
-        stream = broadcaster.listen(idx)
+        stream = broadcaster.listen(idx, heartbeat_interval=heartbeat_interval)
         return sse_response(stream)
-

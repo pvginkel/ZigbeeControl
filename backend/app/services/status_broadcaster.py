@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 from dataclasses import dataclass
 from typing import Dict, Generator, List
 
 from app.schemas.status import StatusPayload, StatusState
 from app.services.exceptions import TabNotFound
+from app.utils.sse import HeartbeatEvent
 
 
 @dataclass
@@ -46,22 +48,39 @@ class StatusBroadcaster:
             if subscriber.active:
                 subscriber.queue.put(payload)
 
-    def listen(self, idx: int) -> Generator[StatusPayload, None, None]:
-        """Create a generator that yields status updates for the tab."""
+    def listen(
+        self,
+        idx: int,
+        *,
+        heartbeat_interval: float | None = None,
+    ) -> Generator[StatusPayload | HeartbeatEvent, None, None]:
+        """Create a generator that yields status updates (and optional heartbeats)."""
         self._validate_idx(idx)
         subscription = _Subscription(queue.Queue())
         subscription.queue.put(self._last[idx])
         with self._lock:
             self._subscribers[idx].append(subscription)
 
-        def _iterator() -> Generator[StatusPayload, None, None]:
+        heartbeat_value = float(heartbeat_interval) if heartbeat_interval is not None else None
+        heartbeat_enabled = heartbeat_value is not None
+        timeout = min(1.0, heartbeat_value) if heartbeat_value is not None else 1.0
+
+        def _iterator() -> Generator[StatusPayload | HeartbeatEvent, None, None]:
+            last_sent = _now()
             try:
                 while subscription.active:
                     try:
-                        payload = subscription.queue.get(timeout=1.0)
+                        payload = subscription.queue.get(timeout=timeout)
                     except queue.Empty:
+                        if not heartbeat_enabled or not subscription.active:
+                            continue
+                        now = _now()
+                        if heartbeat_value is not None and now - last_sent >= heartbeat_value:
+                            last_sent = now
+                            yield HeartbeatEvent()
                         continue
                     yield payload
+                    last_sent = _now()
             finally:
                 subscription.active = False
                 with self._lock:
@@ -80,3 +99,8 @@ class StatusBroadcaster:
             subscriber.active = False
             subscriber.queue.put(self._last[idx])
 
+
+def _now() -> float:
+    """Return the current monotonic time used for heartbeat bookkeeping."""
+
+    return time.perf_counter()
