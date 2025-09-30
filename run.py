@@ -31,7 +31,7 @@ def main() -> None:
     app = create_app()
 
     host = os.getenv("Z2M_BACKEND_HOST", "0.0.0.0")
-    port_value = os.getenv("Z2M_BACKEND_PORT", "8000")
+    port_value = os.getenv("Z2M_BACKEND_PORT", "5000")
     try:
         port = int(port_value)
     except ValueError as exc:  # pragma: no cover - defensive parsing guard

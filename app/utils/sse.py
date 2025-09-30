@@ -35,7 +35,6 @@ def sse_response(source: Iterable[StatusPayload]) -> Response:
 
     response = Response(stream_with_context(_generate()), mimetype="text/event-stream")
     response.headers["Cache-Control"] = "no-cache"
-    response.headers["Connection"] = "keep-alive"
     response.headers.setdefault("X-Accel-Buffering", "no")
     return response
 
