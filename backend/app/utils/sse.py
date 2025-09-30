@@ -37,4 +37,3 @@ def sse_response(source: Iterable[StatusPayload]) -> Response:
     response.headers["Cache-Control"] = "no-cache"
     response.headers.setdefault("X-Accel-Buffering", "no")
     return response
-

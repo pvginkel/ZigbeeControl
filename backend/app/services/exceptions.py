@@ -20,6 +20,11 @@ class ConfigLoadFailed(ConfigError):
         self.path = path
 
 
+class AuthConfigError(ConfigError):
+    """Raised when authentication configuration is invalid."""
+
+
+
 class TabLookupError(RuntimeError):
     """Base class for problems locating or working with a tab."""
 
@@ -79,4 +84,3 @@ class RestartFailed(RestartError):
 
     def __init__(self, message: str, *, namespace: str, deployment: str):
         super().__init__(message, namespace=namespace, deployment=deployment)
-

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 
 from dotenv import load_dotenv
 from flask import Flask
@@ -11,9 +11,10 @@ from spectree import SpecTree
 
 from app.api import create_api_blueprint
 from app.services.config_service import ConfigService
-from app.services.exceptions import ConfigLoadFailed
+from app.services.exceptions import AuthConfigError, ConfigLoadFailed
 from app.services.kubernetes_service import KubernetesService
 from app.services.status_broadcaster import StatusBroadcaster
+from app.utils.auth import AuthConfig, AuthManager
 from app.utils.config_loader import load_tabs_config
 from app.utils.cors import configure_cors, parse_allowed_origins
 
@@ -42,12 +43,38 @@ def create_app(*, config_path: str | None = None) -> Flask:
     if allowed_origins:
         configure_cors(app, allowed_origins)
 
+    auth_disabled = os.environ.get("APP_AUTH_DISABLED", "").lower() in {"1", "true", "yes", "on"}
+    auth_token = os.environ.get("APP_AUTH_TOKEN")
+    auth_cookie_name = os.environ.get("APP_AUTH_COOKIE_NAME", "z2m_auth")
+    jwt_secret = os.environ.get("APP_AUTH_JWT_SECRET") or auth_token or ""
+
+    if not auth_disabled and not auth_token:
+        raise AuthConfigError("APP_AUTH_TOKEN environment variable is required when authentication is enabled")
+
+    secret_key = os.environ.get("APP_SECRET_KEY") or (jwt_secret if jwt_secret else None)
+    if secret_key:
+        app.secret_key = secret_key
+
+    flask_env = os.environ.get("FLASK_ENV", "production")
+    secure_cookies = flask_env.lower() == "production"
+
+    auth_manager = AuthManager(
+        AuthConfig(
+            login_token=auth_token,
+            cookie_name=auth_cookie_name,
+            jwt_secret=jwt_secret,
+            disabled=auth_disabled,
+            secure_cookies=secure_cookies,
+        )
+    )
+
     app.extensions.setdefault("z2m", {})
     app.extensions["z2m"].update(
         {
             "config_service": config_service,
             "status_broadcaster": status_broadcaster,
             "kubernetes_service": kubernetes_service,
+            "auth_manager": auth_manager,
         }
     )
 
@@ -56,6 +83,7 @@ def create_app(*, config_path: str | None = None) -> Flask:
         config_service=config_service,
         kubernetes_service=kubernetes_service,
         status_broadcaster=status_broadcaster,
+        auth_manager=auth_manager,
         spectree=spectree,
     )
     app.register_blueprint(api_blueprint)
