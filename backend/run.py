@@ -42,7 +42,7 @@ def main() -> None:
     if env == _PROD:
         from waitress import serve  # type: ignore[import-not-found]
 
-        serve(app, host=host, port=port, threads=20)
+        serve(app, host=host, port=port, threads=60)
     else:
         app.run(host=host, port=port, debug=True)
 
