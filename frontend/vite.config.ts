@@ -126,7 +126,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      port: 5173,
+      host: true,
+      port: 3000,
+      allowedHosts: true,
       // If you use HTTPS locally, set https: true and run code-server with TLS or let the proxy terminate TLS.
       // https: true,
       proxy,

@@ -4,11 +4,11 @@
 
 ## 1) What this app is for
 
-A tiny “wrapper” UI that shows three tabs—**Zigbee2MQTT – 1**, **Zigbee2MQTT – 2**, and **Code Server**—each loading the target UI in a persistent IFRAME. The Z2M tabs include a restart button that triggers a Kubernetes rollout restart. The app streams simple status via SSE so the tab’s icon reflects **running / restarting / error** without page refresh.
+A tiny “wrapper” UI that shows three tabs—**Zigbee2MQTT – 1**, **Zigbee2MQTT – 2**, and **Code Server**—each loading the target UI in a persistent IFRAME. The Z2M tabs include a restart button that triggers a Kubernetes rollout restart. The app streams simple status via SSE so the tab’s icon reflects **running / restarting / error** without page refresh, and the wrapper itself sits behind a single shared-password login backed by the API.
 
 ## 2) Who will use it
 
-You, on a home network. No auth.
+You, on a home network. Authenticated via a single shared password (cookie-backed).
 
 ## 3) Scope (exactly what it does)
 
@@ -16,10 +16,11 @@ You, on a home network. No auth.
 * **IFRAMEs:** one per tab; created **lazily on first open** and **never destroyed**—subsequent tab switches hide/show only.
 * **Restart control (Z2M tabs):** click the restart icon → backend triggers **`kubectl rollout restart` equivalent** via Kubernetes Python client → SSE stream updates the icon state.
 * **Status stream:** on app load, the frontend opens an **SSE connection per restartable tab** to receive `running | restarting | error`.
+* **Password gate:** verify `GET /api/auth/check`, show a one-field password form that posts to `POST /api/auth/login`, then mount the tab shell once the cookie is issued.
 
 ## 4) Out of scope (won’t do now or later)
 
-* Authentication, RBAC UI, user management.
+* Multi-user account management, RBAC dashboards, or token provisioning flows (shared secret only).
 * Metrics/Prometheus, dashboards, analytics.
 * Extending features beyond adding more tabs via config.
 * NGINX/Kubernetes ingress setup (you’ll handle it).
@@ -69,7 +70,7 @@ tabs:
 
 ## 7) Key workflows
 
-1. **Open app →** first tab visible (IFRAME created). For tabs with `k8s`, FE opens an SSE stream for live status.
+1. **Open app →** FE runs `GET /api/auth/check`; when unauthorized it blocks on the password prompt until `POST /api/auth/login` succeeds, then loads the config and makes the first tab visible (IFRAME created). For tabs with `k8s`, FE opens an SSE stream for live status.
 2. **Switch tabs →** previously created IFRAMEs are **hidden, not unmounted**, and instantly shown again.
 3. **Restart (Z2M tabs) →** click icon → FE sends `POST /api/restart/:tabIndex` → icon switches to blinking **restarting** immediately → SSE later flips to **running** or **error**.
 
@@ -84,7 +85,7 @@ tabs:
 
 * **Simplicity:** no database, no queues; in-memory only.
 * **Resilience:** SSE auto-retry with backoff; backend guards against duplicate restarts on the same deployment.
-* **Security:** none (LAN only); see §11 for framing headers advice.
+* **Security:** shared-secret password issuing an HttpOnly cookie; still assumes LAN deployment plus the framing considerations in §11.
 
 ## 10) Architecture (mirrors your existing patterns)
 
@@ -102,6 +103,8 @@ tabs:
 
 ## 11) API design
 
+* `GET /api/auth/check` → returns 200 when the auth cookie is valid; 403 otherwise so the FE shows the password screen.
+* `POST /api/auth/login` → accepts `{password}` and issues the auth cookie (SameSite=None + Partitioned) on success; 403 on mismatch.
 * `GET /api/config` → FE bootstrap (normalized config: tabs + restartable flags).
 * `POST /api/restart/:idx` → triggers a **rollout restart** (patch `spec.template.metadata.annotations.kubectl.kubernetes.io/restartedAt` to current timestamp). Returns `{ok:true}` immediately.
 * `GET /api/status/:idx/stream` (SSE) → emits one-line JSON payloads with `status`:
@@ -153,6 +156,7 @@ You’ll ensure each embedded app allows being framed by the wrapper’s origin.
 * **Iframe blocking:** some services send restrictive `X-Frame-Options`/CSP → mitigate with NGINX overrides (see §13).
 * **SSE drops:** home Wi-Fi hiccups → FE auto-reconnect with exponential backoff; backend is idempotent on restart.
 * **Rollout ambiguity:** detecting “ready” on Deployments can be racy if probes are slow—use Deployment conditions and a sensible timeout (180s).
+* **Cookie scoping:** auth cookie must stay Partitioned + SameSite=None so the wrapper loads inside the Home Assistant iframe without third-party cookie blocks.
 
 ---
 

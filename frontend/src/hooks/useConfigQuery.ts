@@ -1,9 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchConfig } from '../lib/api'
+import { fetchConfig, isUnauthorizedError } from '../lib/api'
 import type { ConfigResponse, UiTabConfig } from '../lib/types'
 
 interface ConfigQueryResult {
   tabs: UiTabConfig[]
+}
+
+interface UseConfigQueryOptions {
+  enabled?: boolean
+  onUnauthorized?: () => void
 }
 
 function normalizeConfig(response: ConfigResponse): ConfigQueryResult {
@@ -15,12 +20,25 @@ function normalizeConfig(response: ConfigResponse): ConfigQueryResult {
   return { tabs }
 }
 
-export function useConfigQuery() {
+export function useConfigQuery(options: UseConfigQueryOptions = {}) {
+  const { enabled = true, onUnauthorized } = options
+
   return useQuery({
     queryKey: ['config'],
-    queryFn: fetchConfig,
+    queryFn: async () => {
+      try {
+        return await fetchConfig()
+      } catch (error) {
+        if (isUnauthorizedError(error)) {
+          onUnauthorized?.()
+        }
+        throw error
+      }
+    },
     select: normalizeConfig,
     staleTime: Infinity,
     gcTime: Infinity,
+    enabled,
+    retry: false,
   })
 }

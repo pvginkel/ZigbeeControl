@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query'
-import { restartTab } from '../lib/api'
+import { restartTab, isUnauthorizedError } from '../lib/api'
 import type { TabStatus } from '../lib/types'
 import { useTabsStore } from '../state/useTabsStore'
+import { useAuthActions } from './useAuth'
 
 interface MutationContext {
   previousStatus: TabStatus
@@ -9,6 +10,7 @@ interface MutationContext {
 
 export function useRestartMutation(tabIndex: number) {
   const setStatus = useTabsStore((state) => state.setStatus)
+  const { markUnauthenticated } = useAuthActions()
 
   return useMutation<void, Error, void, MutationContext>({
     mutationKey: ['restart', tabIndex],
@@ -23,6 +25,12 @@ export function useRestartMutation(tabIndex: number) {
       if (context?.previousStatus) {
         setStatus(tabIndex, context.previousStatus)
       }
+
+      if (isUnauthorizedError(error)) {
+        markUnauthenticated()
+        return
+      }
+
       console.warn(`Restart failed for tab ${tabIndex}`, error)
     },
   })
