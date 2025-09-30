@@ -8,7 +8,7 @@ A tiny “wrapper” UI that shows three tabs—**Zigbee2MQTT – 1**, **Zigbee2
 
 ## 2) Who will use it
 
-You, on a home network. No auth.
+You, on a home network. Single shared-secret login that issues a cookie; no multi-user flows.
 
 ## 3) Scope (exactly what it does)
 
@@ -16,10 +16,11 @@ You, on a home network. No auth.
 * **IFRAMEs:** one per tab; created **lazily on first open** and **never destroyed**—subsequent tab switches hide/show only.
 * **Restart control (Z2M tabs):** click the restart icon → backend triggers **`kubectl rollout restart` equivalent** via Kubernetes Python client → SSE stream updates the icon state.
 * **Status stream:** on app load, the frontend opens an **SSE connection per restartable tab** to receive `running | restarting | error`.
+* **Authentication:** shared-secret login issues a JWT-backed cookie, plus a probe endpoint so NGINX `auth_request` can reuse it.
 
 ## 4) Out of scope (won’t do now or later)
 
-* Authentication, RBAC UI, user management.
+* RBAC UI, user management.
 * Metrics/Prometheus, dashboards, analytics.
 * Extending features beyond adding more tabs via config.
 * NGINX/Kubernetes ingress setup (you’ll handle it).
@@ -84,7 +85,7 @@ tabs:
 
 * **Simplicity:** no database, no queues; in-memory only.
 * **Resilience:** SSE auto-retry with backoff; backend guards against duplicate restarts on the same deployment.
-* **Security:** none (LAN only); see §11 for framing headers advice.
+* **Security:** shared-secret cookie auth (HttpOnly, `SameSite=None`, `Partitioned`; `Secure` when `FLASK_ENV=production`); still LAN-first. See §11 for framing headers advice.
 
 ## 10) Architecture (mirrors your existing patterns)
 
@@ -102,8 +103,10 @@ tabs:
 
 ## 11) API design
 
-* `GET /api/config` → FE bootstrap (normalized config: tabs + restartable flags).
-* `POST /api/restart/:idx` → triggers a **rollout restart** (patch `spec.template.metadata.annotations.kubectl.kubernetes.io/restartedAt` to current timestamp). Returns `{ok:true}` immediately.
+* `POST /api/auth/login` → exchange shared secret for a long-lived (~10 year) JWT cookie (`HttpOnly`, `SameSite=None`, `Partitioned`; `Secure` when `FLASK_ENV=production`). No JWT expiry claim; rotate the shared secret to revoke sessions.
+* `GET /api/auth/check` → probe endpoint for NGINX `auth_request`; `200` with `{authenticated:true}` when cookie valid, `403` otherwise. Short-circuits to success when auth disabled for dev.
+* `GET /api/config` → FE bootstrap (normalized config: tabs + restartable flags). Requires auth cookie unless disabled.
+* `POST /api/restart/:idx` → triggers a **rollout restart** (patch `spec.template.metadata.annotations.kubectl.kubernetes.io/restartedAt` to current timestamp). Returns `{ok:true}` immediately. Requires auth cookie unless disabled.
 * `GET /api/status/:idx/stream` (SSE) → emits one-line JSON payloads with `status`:
 
   * `{"status":"running"}` (initial + steady state),
@@ -121,7 +124,7 @@ tabs:
 
 ## 12) Configuration & deployment
 
-* **Env var:** `APP_TABS_CONFIG` → absolute path to the YAML shown in §5.
+* **Env vars:** `APP_TABS_CONFIG` (YAML path), `APP_AUTH_TOKEN` (shared secret), optional `APP_AUTH_COOKIE_NAME`, `APP_SECRET_KEY`, and `APP_AUTH_DISABLED` for local bypass.
 * **Containerization:** single Docker image for the wrapper (FE built into static assets served by the Flask app or sidecar NGINX—either is fine).
 * **K8s:** one Deployment + Service for the wrapper; you’ll wire Ingress/NGINX.
 

@@ -4,8 +4,8 @@ This document distills the current product brief so agents and contributors stay
 
 ## Purpose & Audience
 - **Goal:** Deliver a lightweight web UI that wraps three existing services (two Zigbee2MQTT dashboards and a code-server instance) inside persistent IFRAME tabs.
-- **Users:** Single-operator, LAN-only usage. No authentication or multi-tenant requirements.
-- **Scope:** Tabbed interface, optional restart controls for Kubernetes-backed tabs, and live status via Server-Sent Events (SSE). Nothing beyond those concerns.
+- **Users:** Single-operator, LAN-only usage. Authentication is a shared secret that issues an HttpOnly cookie; no multi-tenant requirements.
+- **Scope:** Tabbed interface, optional restart controls for Kubernetes-backed tabs, live status via Server-Sent Events (SSE), and lightweight shared-secret cookie authentication. Nothing beyond those concerns.
 
 ## Architecture Overview
 - **Frontend:** React 19 + TypeScript + Vite. Tabs as internal state (no router). Zustand or reducer-based state is acceptable. Use TanStack Query for the restart mutation and any light caching.
@@ -14,7 +14,7 @@ This document distills the current product brief so agents and contributors stay
 - **Config Source:** YAML file path supplied by `APP_TABS_CONFIG` environment variable. Keep schema minimal: `text`, `iconUrl`, `iframeUrl`, and optional `k8s` block with `namespace` and `deployment` strings.
 
 ## Backend Expectations
-- Keep API surface tiny: `GET /api/config`, `POST /api/restart/<idx>`, `GET /api/status/<idx>/stream`.
+- Keep API surface tiny: `POST /api/auth/login`, `GET /api/auth/check`, `GET /api/config`, `POST /api/restart/<idx>`, `GET /api/status/<idx>/stream`.
 - Use Pydantic schemas (Spectree integration) for request/response validation.
 - `KubernetesService` (or equivalent) handles rollout restarts and status watching using the official Python client. Guard against duplicate restarts on the same deployment.
 - SSE streaming helpers should emit `event: status` messages with JSON payloads limited to `running`, `restarting`, or `error` (with optional `message`). Include sensible retry headers (`retry: 3000`).
@@ -36,7 +36,7 @@ This document distills the current product brief so agents and contributors stay
 4. SSE emits `restarting` then `running` on success, or `error` with diagnostic text if timeout/rollout failure occurs.
 
 ## Non-Functional Constraints
-- No authentication, RBAC, or metrics. Keep dependencies minimal.
+- Shared-secret cookie authentication only; no RBAC or metrics. Keep dependencies minimal.
 - Prioritize simplicity and resilience: SSE should auto-retry, and backend should gracefully handle reconnects.
 - LAN deployment assumed. Coordinate iframe hosting origins via reverse proxy/CSP headers (see product brief section 13 for operator guidance).
 

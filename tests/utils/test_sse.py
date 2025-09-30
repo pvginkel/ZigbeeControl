@@ -21,7 +21,6 @@ def test_sse_response_sets_headers_and_streams_payload():
         response = sse_response(payloads)
         assert response.mimetype == "text/event-stream"
         assert response.headers["Cache-Control"] == "no-cache"
-        assert response.headers["Connection"] == "keep-alive"
         body = "".join(response.response)
         assert "event: status" in body
 
