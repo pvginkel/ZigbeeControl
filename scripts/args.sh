@@ -1,6 +1,6 @@
 mkdir -p $(pwd)/tmp
 
-NAME=electronics-inventory
+NAME=zigbee-control
 ARGS="
     --network host
     -e FLASK_ENV=development
