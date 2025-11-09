@@ -1,6 +1,6 @@
 mkdir -p $(pwd)/tmp
 
-NAME=electronics-inventory-ui
+NAME=zigbee-control-ui
 BUILD_ARGS="
 "
 ARGS="
