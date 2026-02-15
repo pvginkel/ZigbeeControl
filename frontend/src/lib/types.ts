@@ -1,5 +1,11 @@
 export type TabStatus = 'running' | 'restarting' | 'error'
 
+export interface TabStatusEvent {
+  tab_index: number
+  state: TabStatus
+  message: string | null
+}
+
 export interface K8sInfo {
   namespace: string
   deployment: string

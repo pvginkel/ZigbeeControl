@@ -1,41 +1,45 @@
 import { useEffect, useRef } from 'react'
-import { openStatusStream } from '../lib/api'
-import type { TabStatus } from '../lib/types'
+import { buildSseGatewayUrl } from '../lib/api'
+import type { TabStatusEvent } from '../lib/types'
 import { useTabsStore } from '../state/useTabsStore'
+
+function generateRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  // Fallback for insecure contexts (HTTP dev)
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
 
 const BACKOFF_BASE_MS = 3000
 const BACKOFF_MULTIPLIER = 2
 const BACKOFF_MAX_MS = 30000
 
-type StatusPayload = {
-  status?: TabStatus
-  state?: TabStatus
-}
-
-function parseStatus(data: string): TabStatus | null {
+function parseTabStatusEvent(data: string): TabStatusEvent | null {
   try {
-    const payload = JSON.parse(data) as StatusPayload
-    const status = payload.status ?? payload.state
-    if (status === 'running' || status === 'restarting' || status === 'error') {
-      return status
+    const payload = JSON.parse(data) as TabStatusEvent
+    if (
+      typeof payload.tab_index === 'number' &&
+      (payload.state === 'running' || payload.state === 'restarting' || payload.state === 'error')
+    ) {
+      return payload
     }
   } catch (error) {
-    console.warn('Failed to parse SSE status payload', error)
+    console.warn('Failed to parse SSE tab_status payload', error)
   }
   return null
 }
 
-export function useSseStatus(tabIndex: number, enabled: boolean) {
+export function useSseGateway() {
   const setStatus = useTabsStore((state) => state.setStatus)
   const retryAttemptRef = useRef(0)
   const timeoutRef = useRef<number | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
-    if (!enabled) {
-      return
-    }
-
     let isDisposed = false
 
     const clearTimer = () => {
@@ -65,13 +69,6 @@ export function useSseStatus(tabIndex: number, enabled: boolean) {
       }, delay)
     }
 
-    const handleStatus = (payload: string) => {
-      const parsed = parseStatus(payload)
-      if (parsed) {
-        setStatus(tabIndex, parsed)
-      }
-    }
-
     const connect = () => {
       if (isDisposed) {
         return
@@ -80,28 +77,32 @@ export function useSseStatus(tabIndex: number, enabled: boolean) {
       disconnect()
 
       try {
-        const source = openStatusStream(tabIndex)
+        const requestId = generateRequestId()
+        const url = buildSseGatewayUrl(requestId)
+        const source = new EventSource(url, { withCredentials: true })
         eventSourceRef.current = source
 
         source.addEventListener('open', () => {
           retryAttemptRef.current = 0
         })
 
-        source.addEventListener('status', (event) => {
+        source.addEventListener('tab_status', (event) => {
           const messageEvent = event as MessageEvent<string>
-          handleStatus(messageEvent.data)
+          const parsed = parseTabStatusEvent(messageEvent.data)
+          if (parsed) {
+            setStatus(parsed.tab_index, parsed.state)
+            if (parsed.message) {
+              console.log(`[tab ${parsed.tab_index}] ${parsed.message}`)
+            }
+          }
         })
-
-        source.onmessage = (event) => {
-          handleStatus(event.data)
-        }
 
         source.onerror = () => {
           disconnect()
           scheduleReconnect()
         }
       } catch (error) {
-        console.warn(`Failed to open SSE stream for tab ${tabIndex}`, error)
+        console.warn('Failed to open SSE Gateway stream', error)
         scheduleReconnect()
       }
     }
@@ -113,5 +114,5 @@ export function useSseStatus(tabIndex: number, enabled: boolean) {
       clearTimer()
       disconnect()
     }
-  }, [enabled, setStatus, tabIndex])
+  }, [setStatus])
 }

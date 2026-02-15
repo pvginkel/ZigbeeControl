@@ -1,9 +1,8 @@
 import { useCallback } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  checkAuth,
+  fetchSelf,
   isUnauthorizedError,
-  login,
   type ApiError,
 } from '../lib/api'
 
@@ -15,7 +14,7 @@ export const AUTH_QUERY_KEY = ['auth', 'status'] as const
 
 async function fetchAuthStatus(): Promise<AuthQueryData> {
   try {
-    await checkAuth()
+    await fetchSelf()
     return { isAuthenticated: true }
   } catch (error) {
     if (isUnauthorizedError(error)) {
@@ -29,19 +28,15 @@ async function fetchAuthStatus(): Promise<AuthQueryData> {
 export function useAuthActions() {
   const queryClient = useQueryClient()
 
-  const markAuthenticated = useCallback(() => {
-    queryClient.setQueryData<AuthQueryData>(AUTH_QUERY_KEY, { isAuthenticated: true })
-  }, [queryClient])
-
   const markUnauthenticated = useCallback(() => {
     queryClient.setQueryData<AuthQueryData>(AUTH_QUERY_KEY, { isAuthenticated: false })
   }, [queryClient])
 
-  return { markAuthenticated, markUnauthenticated }
+  return { markUnauthenticated }
 }
 
 export function useAuth() {
-  const { markAuthenticated, markUnauthenticated } = useAuthActions()
+  const { markUnauthenticated } = useAuthActions()
 
   const authQuery = useQuery<AuthQueryData, ApiError | Error>({
     queryKey: AUTH_QUERY_KEY,
@@ -51,25 +46,11 @@ export function useAuth() {
     gcTime: Infinity,
   })
 
-  const loginMutation = useMutation<void, ApiError | Error, string>({
-    mutationFn: (password) => login(password),
-    onSuccess: () => {
-      markAuthenticated()
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        markUnauthenticated()
-      }
-    },
-  })
-
   return {
     isChecking: authQuery.isPending,
     isAuthenticated: authQuery.data?.isAuthenticated ?? false,
     authError: authQuery.error instanceof Error ? authQuery.error : null,
     refetchAuth: authQuery.refetch,
-    loginMutation,
-    markAuthenticated,
     markUnauthenticated,
   }
 }

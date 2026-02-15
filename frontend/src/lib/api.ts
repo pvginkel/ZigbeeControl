@@ -76,9 +76,21 @@ async function handleErrorResponse(response: Response, fallbackMessage: string):
   throw new ApiError(message, response.status, details)
 }
 
+export async function fetchSelf(): Promise<void> {
+  const response = await fetch(buildUrl('auth/self'), {
+    headers: JSON_HEADERS,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    await handleErrorResponse(response, `Auth check failed with status ${response.status}`)
+  }
+}
+
 export async function fetchConfig(): Promise<ConfigResponse> {
   const response = await fetch(buildUrl('config'), {
     headers: JSON_HEADERS,
+    credentials: 'include',
   })
 
   if (!response.ok) {
@@ -92,6 +104,7 @@ export async function restartTab(tabIndex: number): Promise<void> {
   const response = await fetch(buildUrl(`restart/${tabIndex}`), {
     method: 'POST',
     headers: JSON_HEADERS,
+    credentials: 'include',
   })
 
   if (!response.ok) {
@@ -99,30 +112,8 @@ export async function restartTab(tabIndex: number): Promise<void> {
   }
 }
 
-export function openStatusStream(tabIndex: number): EventSource {
-  return new EventSource(buildUrl(`status/${tabIndex}/stream`), { withCredentials: true })
-}
-
-export async function checkAuth(): Promise<void> {
-  const response = await fetch(buildUrl('auth/check'), {
-    headers: JSON_HEADERS,
-  })
-
-  if (!response.ok) {
-    await handleErrorResponse(response, `Auth check failed with status ${response.status}`)
-  }
-}
-
-export async function login(password: string): Promise<void> {
-  const response = await fetch(buildUrl('auth/login'), {
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: JSON.stringify({ token: password }),
-  })
-
-  if (!response.ok) {
-    await handleErrorResponse(response, `Login failed with status ${response.status}`)
-  }
+export function buildSseGatewayUrl(requestId: string): string {
+  return `/api/sse/stream?request_id=${requestId}`
 }
 
 export function isUnauthorizedError(error: unknown): error is UnauthorizedError {

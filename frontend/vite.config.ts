@@ -99,6 +99,7 @@ export default defineConfig(({ mode }) => {
   const configPath = env.APP_TABS_CONFIG
   const proxy = createProxyTable(configPath)
   const apiProxyTarget = env.API_PROXY_TARGET
+  const sseGatewayProxyTarget = env.SSE_GATEWAY_PROXY_TARGET
 
   if (!configPath) {
     console.info('[vite] APP_TABS_CONFIG not set; skipping iframe proxy setup')
@@ -106,6 +107,19 @@ export default defineConfig(({ mode }) => {
     console.info(`[vite] no iframe proxy entries created from APP_TABS_CONFIG at ${configPath}`)
   } else {
     console.info('[vite] iframe proxy entries created from APP_TABS_CONFIG:', proxy)
+  }
+
+  if (sseGatewayProxyTarget) {
+    proxy['/api/sse'] = {
+      target: sseGatewayProxyTarget,
+      changeOrigin: true,
+      ws: true,
+      secure: false,
+      headers: {
+        'X-Forwarded-Proto': 'http',
+      },
+    }
+    console.info(`[vite] /api/sse requests proxied to ${sseGatewayProxyTarget}`)
   }
 
   if (apiProxyTarget) {

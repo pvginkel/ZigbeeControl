@@ -1,14 +1,11 @@
-import { useCallback, useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import AppShell from './components/AppShell'
-import LoginScreen from './components/LoginScreen'
 import { useConfigQuery } from './hooks/useConfigQuery'
 import { useAuth } from './hooks/useAuth'
 import { useTabsStore } from './state/useTabsStore'
 
 function App() {
-  const queryClient = useQueryClient()
-  const { isChecking, isAuthenticated, authError, refetchAuth, loginMutation, markUnauthenticated } = useAuth()
+  const { isChecking, isAuthenticated, authError, refetchAuth, markUnauthenticated } = useAuth()
   const { data, isLoading, isError, error, refetch } = useConfigQuery({
     enabled: isAuthenticated,
     onUnauthorized: markUnauthenticated,
@@ -21,22 +18,14 @@ function App() {
     }
   }, [data, initialize, isAuthenticated])
 
-  const handleLogin = useCallback(
-    async (password: string) => {
-      loginMutation.reset()
-      await loginMutation.mutateAsync(password)
-      await refetchAuth()
-      await queryClient.invalidateQueries({ queryKey: ['config'] })
-    },
-    [loginMutation, queryClient, refetchAuth],
-  )
+  useEffect(() => {
+    if (!isChecking && !isAuthenticated && !authError) {
+      window.location.href = `/api/auth/login?redirect=${encodeURIComponent(window.location.href)}`
+    }
+  }, [isChecking, isAuthenticated, authError])
 
-  if (isChecking) {
-    return (
-      <div className="app-feedback" role="status">
-        Checking authentication…
-      </div>
-    )
+  if (isChecking || (!isAuthenticated && !authError)) {
+    return <div className="app-feedback" />
   }
 
   if (authError) {
@@ -49,11 +38,6 @@ function App() {
         </button>
       </div>
     )
-  }
-
-  if (!isAuthenticated) {
-    const loginError = loginMutation.error instanceof Error ? loginMutation.error.message : undefined
-    return <LoginScreen isSubmitting={loginMutation.isPending} onSubmit={handleLogin} errorMessage={loginError} />
   }
 
   if (isLoading) {

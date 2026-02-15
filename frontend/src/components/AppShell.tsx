@@ -4,18 +4,14 @@ import type { UiTabConfig } from '../lib/types'
 import { useTabsStore } from '../state/useTabsStore'
 import TabButton from './TabButton'
 import TabContent from './TabContent'
-import { useSseStatus } from '../hooks/useSseStatus'
+import { useSseGateway } from '../hooks/useSseStatus'
 
 interface AppShellProps {
   tabs: UiTabConfig[]
 }
 
-function StatusStream({ tabIndex, enabled }: { tabIndex: number; enabled: boolean }) {
-  useSseStatus(tabIndex, enabled)
-  return null
-}
-
 export default function AppShell({ tabs }: AppShellProps) {
+  useSseGateway()
   const activeIndex = useTabsStore((state) => state.activeIndex)
   const setActiveIndex = useTabsStore((state) => state.setActiveIndex)
   const mounted = useTabsStore((state) => state.mounted)
@@ -106,9 +102,6 @@ export default function AppShell({ tabs }: AppShellProps) {
           />
         ))}
       </div>
-      {tabs.map((tab, index) => (
-        <StatusStream key={`status-${index}`} tabIndex={index} enabled={tab.isRestartable} />
-      ))}
     </div>
   )
 }
