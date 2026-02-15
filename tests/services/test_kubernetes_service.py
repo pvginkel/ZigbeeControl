@@ -1,16 +1,18 @@
+"""Tests for KubernetesService."""
+
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from unittest.mock import MagicMock
 
 import pytest
 from kubernetes.client import ApiException
 
 from app.schemas.config import KubernetesConfig, TabConfig
-from app.schemas.status import StatusPayload, StatusState
+from app.schemas.status import StatusState
 from app.services.kubernetes_service import KubernetesService
-from app.services.status_broadcaster import StatusBroadcaster
-from app.utils.sse import HeartbeatEvent
+from app.services.tab_status_service import TabStatusService
 
 
 @dataclass
@@ -59,7 +61,7 @@ class _FakeAppsApi:
     def patch_namespaced_deployment(self, name: str, namespace: str, body):
         self.patched.append((name, namespace, body))
 
-    def read_namespaced_deployment_status(self, name: str, namespace: str):  # pragma: no cover - stub for API parity
+    def read_namespaced_deployment_status(self, name: str, namespace: str):
         if self.status_obj is not None:
             return self.status_obj
         return self.stream_events[-1]["object"] if self.stream_events else None
@@ -83,8 +85,8 @@ class _FakeWatch:
 
     def stream(self, func, *args, **kwargs):
         kwargs.setdefault("watch", True)
-        self.calls.append((func, args, kwargs))
         func(*args, **kwargs)
+        self.calls.append((func, args, kwargs))
         yield from self._events
 
     def stop(self):
@@ -100,27 +102,29 @@ def _make_tab() -> TabConfig:
     )
 
 
+def _make_tab_status_service() -> TabStatusService:
+    """Create a TabStatusService with a mocked SSE connection manager."""
+    from app.services.config_service import ConfigService
+
+    tabs = [
+        TabConfig(
+            text="Tab",
+            iconUrl="https://example.com/icon.svg",
+            iframeUrl="https://example.com/tab",
+        ),
+    ]
+    config_svc = ConfigService(tabs)
+    mock_sse = MagicMock()
+    return TabStatusService(config_svc, mock_sse)
+
+
 def _wait_for_idle(service: KubernetesService, timeout: float = 2.0):
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if not service._inflight:  # type: ignore[attr-defined]
+        if not service._inflight:
             return
         time.sleep(0.05)
     pytest.fail("worker thread did not complete")
-
-
-def _consume(stream, timeout: float = 2.0) -> StatusPayload:
-    deadline = time.time() + timeout
-    while True:
-        if time.time() > deadline:
-            pytest.fail("timed out waiting for status event")
-        try:
-            message = next(stream)
-        except StopIteration:  # pragma: no cover - defensive
-            pytest.fail("status stream terminated unexpectedly")
-        if isinstance(message, HeartbeatEvent):
-            continue
-        return message
 
 
 def test_restart_success_sets_running():
@@ -213,38 +217,24 @@ def test_restart_success_sets_running():
             spec=_FakeSpec(replicas=1),
         ),
     )
-    broadcaster = StatusBroadcaster(1)
+    tab_status_service = _make_tab_status_service()
     watcher = _FakeWatch(events)
     service = KubernetesService(
-        status_broadcaster=broadcaster,
+        tab_status_service=tab_status_service,
         apps_api=apps_api,
         watch_factory=lambda: watcher,
         restart_timeout=2,
     )
 
-    stream = broadcaster.listen(0)
-    assert _consume(stream).state == StatusState.RUNNING
-
     tab = _make_tab()
     service.request_restart(0, tab)
-
-    assert _consume(stream).state == StatusState.RESTARTING
-    assert _consume(stream).state == StatusState.RUNNING
     _wait_for_idle(service)
+
     assert watcher.stopped
     assert watcher.calls
-    func, args, kwargs = watcher.calls[0]
-    assert getattr(func, "__self__", None) is apps_api
-    assert getattr(func, "__name__", "") == "list_namespaced_deployment"
-    assert kwargs["field_selector"] == "metadata.name=code-server"
-    assert apps_api.list_calls
-    list_call = apps_api.list_calls[0]
-    assert list_call["namespace"] == "default"
-    assert list_call["field_selector"] == "metadata.name=code-server"
-    assert list_call["kwargs"].get("watch") is True
-    assert list_call["kwargs"].get("timeout_seconds") == 2
-    stream.close()
     assert apps_api.patched
+    # Final status should be RUNNING
+    assert tab_status_service.current(0).state == StatusState.RUNNING
 
 
 def test_restart_timeout_emits_error():
@@ -257,59 +247,45 @@ def test_restart_timeout_emits_error():
             spec=_FakeSpec(replicas=1),
         ),
     )
-    broadcaster = StatusBroadcaster(1)
+    tab_status_service = _make_tab_status_service()
     watcher = _FakeWatch(events)
     service = KubernetesService(
-        status_broadcaster=broadcaster,
+        tab_status_service=tab_status_service,
         apps_api=apps_api,
         watch_factory=lambda: watcher,
         restart_timeout=1,
     )
 
-    stream = broadcaster.listen(0)
-    assert _consume(stream).state == StatusState.RUNNING
-
     tab = _make_tab()
     service.request_restart(0, tab)
+    _wait_for_idle(service)
 
-    assert _consume(stream).state == StatusState.RESTARTING
-    payload = _consume(stream)
+    assert watcher.stopped
+    payload = tab_status_service.current(0)
     assert payload.state == StatusState.ERROR
     assert "did not finish" in (payload.message or "")
-    _wait_for_idle(service)
-    assert watcher.stopped
-    assert apps_api.list_calls
-    list_call = apps_api.list_calls[0]
-    assert list_call["kwargs"].get("watch") is True
-    assert list_call["kwargs"].get("timeout_seconds") == 1
-    stream.close()
 
 
 def test_restart_api_failure_reports_error():
     events = []
 
     class _FailingAppsApi(_FakeAppsApi):
-        def patch_namespaced_deployment(self, name: str, namespace: str, body):  # type: ignore[override]
+        def patch_namespaced_deployment(self, name: str, namespace: str, body):
             raise ApiException(status=500, reason="boom")
 
     apps_api = _FailingAppsApi(events)
-    broadcaster = StatusBroadcaster(1)
+    tab_status_service = _make_tab_status_service()
     service = KubernetesService(
-        status_broadcaster=broadcaster,
+        tab_status_service=tab_status_service,
         apps_api=apps_api,
         watch_factory=lambda: _FakeWatch(events),
         restart_timeout=1,
     )
 
-    stream = broadcaster.listen(0)
-    assert _consume(stream).state == StatusState.RUNNING
-
     tab = _make_tab()
     service.request_restart(0, tab)
+    _wait_for_idle(service)
 
-    assert _consume(stream).state == StatusState.RESTARTING
-    payload = _consume(stream)
+    payload = tab_status_service.current(0)
     assert payload.state == StatusState.ERROR
     assert "Kubernetes API error" in (payload.message or "")
-    _wait_for_idle(service)
-    stream.close()

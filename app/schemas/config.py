@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -24,8 +22,8 @@ class TabConfig(BaseModel):
     text: str = Field(min_length=1)
     iconUrl: str = Field(min_length=1)
     iframeUrl: str = Field(min_length=1)
-    tabColor: Optional[str] = Field(default=None, min_length=1)
-    k8s: Optional[KubernetesConfig] = None
+    tabColor: str | None = Field(default=None, min_length=1)
+    k8s: KubernetesConfig | None = None
 
     @field_validator("text", "iconUrl", "iframeUrl")
     @classmethod
@@ -37,7 +35,7 @@ class TabConfig(BaseModel):
 
     @field_validator("tabColor")
     @classmethod
-    def _strip_optional(cls, value: Optional[str]) -> Optional[str]:
+    def _strip_optional(cls, value: str | None) -> str | None:
         if value is None:
             return None
         trimmed = value.strip()
@@ -47,11 +45,11 @@ class TabConfig(BaseModel):
 
 
 class TabsConfig(BaseModel):
-    tabs: List[TabConfig]
+    tabs: list[TabConfig]
 
     @field_validator("tabs")
     @classmethod
-    def _require_tabs(cls, value: List[TabConfig]) -> List[TabConfig]:
+    def _require_tabs(cls, value: list[TabConfig]) -> list[TabConfig]:
         if not value:
             raise ValueError("at least one tab must be defined")
         return value
@@ -62,8 +60,8 @@ class TabResponse(BaseModel):
     iconUrl: str
     iframeUrl: str
     restartable: bool
-    tabColor: Optional[str] = None
+    tabColor: str | None = None
 
 
 class ConfigResponse(BaseModel):
-    tabs: List[TabResponse]
+    tabs: list[TabResponse]

@@ -8,8 +8,8 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
+from app.exceptions import ConfigLoadFailed
 from app.schemas.config import TabsConfig
-from app.services.exceptions import ConfigLoadFailed
 
 
 def load_tabs_config(path: str) -> TabsConfig:
@@ -46,4 +46,3 @@ def load_tabs_config(path: str) -> TabsConfig:
         return TabsConfig.model_validate(parsed_payload)
     except ValidationError as exc:
         raise ConfigLoadFailed(f"configuration validation failed: {exc}", path=path) from exc
-

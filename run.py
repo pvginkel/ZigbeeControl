@@ -1,25 +1,16 @@
-"""Entry point for running the Z2M Wrapper backend."""
+"""Development server entry point."""
 
-from __future__ import annotations
-
-import os
 import logging
+import os
+import threading
+
+from paste.translogger import TransLogger  # type: ignore[import-untyped]
+from waitress import serve
 
 from app import create_app
-
-_DEV = "development"
-_PROD = "production"
-_VALID_ENVS = {_DEV, _PROD}
-
-
-def _resolve_env() -> str:
-    value = os.getenv("FLASK_ENV", _DEV).strip().lower()
-    if value not in _VALID_ENVS:
-        raise SystemExit(
-            "FLASK_ENV must be one of {development, production}; "
-            f"got '{value or '<empty>'}'"
-        )
-    return value
+from app.config import Settings
+from app.consts import DEFAULT_BACKEND_PORT
+from app.utils.lifecycle_coordinator import LifecycleEvent
 
 
 def main() -> None:
@@ -27,26 +18,62 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    
-    app = create_app()
 
-    host = os.getenv("Z2M_BACKEND_HOST", "0.0.0.0")
-    port_value = os.getenv("Z2M_BACKEND_PORT", "5000")
-    try:
-        port = int(port_value)
-    except ValueError as exc:  # pragma: no cover - defensive parsing guard
-        raise SystemExit(f"Invalid port number '{port_value}'") from exc
+    settings = Settings.load()
+    app = create_app(settings)
 
-    env = _resolve_env()
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", DEFAULT_BACKEND_PORT))
 
-    if env == _PROD:
-        from waitress import serve  # type: ignore[import-not-found]
+    # Get and initialize the lifecycle coordinator
+    lifecycle_coordinator = app.container.lifecycle_coordinator()
 
-        serve(app, host=host, port=port, threads=60)
-    else:
+    # Enable debug mode for development and testing environments
+    debug_mode = settings.flask_env in ("development", "testing")
+
+    if debug_mode:
+        app.logger.info("Running in debug mode")
+
+        # Only initialize the shutdown coordinator if we're in an actual
+        # Flask worker process.
+        if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+            lifecycle_coordinator.initialize()
+
+        def signal_shutdown(lifecycle_event: LifecycleEvent) -> None:
+            if lifecycle_event == LifecycleEvent.AFTER_SHUTDOWN:
+                # Need to call. os._exit. sys.exit doesn't work with the
+                # reloader is exit.
+                os._exit(0)
+
+        lifecycle_coordinator.register_lifecycle_notification(signal_shutdown)
+
         app.run(host=host, port=port, debug=True)
+    else:
+        lifecycle_coordinator.initialize()
 
+        def runner() -> None:
+            # Production: Use Waitress WSGI server
+            wsgi = TransLogger(app, setup_console_handler=False)
+
+            # Thread count balances concurrency with DB connection pool size.
+            # With pool_size=20 + max_overflow=30 = 50 connections available,
+            # we match Waitress threads to avoid silent connection pool queuing.
+            threads = int(os.getenv("WAITRESS_THREADS", 50))
+            wsgi.logger.info(f"Using Waitress WSGI server with {threads} threads")
+            serve(wsgi, host=host, port=port, threads=threads)
+
+        thread = threading.Thread(target=runner, daemon=True)
+        thread.start()
+
+        event = threading.Event()
+
+        def signal_shutdown_prod(lifecycle_event: LifecycleEvent) -> None:
+            if lifecycle_event == LifecycleEvent.AFTER_SHUTDOWN:
+                event.set()
+
+        lifecycle_coordinator.register_lifecycle_notification(signal_shutdown_prod)
+
+        event.wait()
 
 if __name__ == "__main__":
     main()
-

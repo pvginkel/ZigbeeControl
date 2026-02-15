@@ -1,117 +1,137 @@
-"""Application factory for the Z2M Wrapper backend."""
-
-from __future__ import annotations
+"""Flask application factory."""
 
 import logging
-import os
 
-from dotenv import load_dotenv
-from flask import Flask
-from spectree import SpecTree
+from flask_cors import CORS
 
-from app.api import create_api_blueprint
-from app.services.config_service import ConfigService
-from app.services.exceptions import AuthConfigError, ConfigError, ConfigLoadFailed
-from app.services.kubernetes_service import KubernetesService
-from app.services.status_broadcaster import StatusBroadcaster
-from app.utils.auth import AuthConfig, AuthManager
-from app.utils.config_loader import load_tabs_config
-from app.utils.cors import configure_cors, parse_allowed_origins
-
-logger = logging.getLogger(__name__)
+from app.app import App
+from app.app_config import AppSettings
+from app.config import Settings
 
 
-def create_app(*, config_path: str | None = None) -> Flask:
-    """Application factory used by both tests and runtime."""
+def create_app(settings: "Settings | None" = None, app_settings: "AppSettings | None" = None, skip_background_services: bool = False) -> App:
+    """Create and configure Flask application.
 
-    logger.info("Creating app")
+    This factory follows a hook-based pattern where app-specific behavior
+    is injected through three functions in app/startup.py:
+    - create_container(): builds the DI container with app-specific providers
+    - register_blueprints(): registers domain resource blueprints
+    - register_error_handlers(): registers app-specific error handlers
+    """
+    app = App(__name__)
 
-    app = Flask(__name__)
+    # Load configuration
+    if settings is None:
+        settings = Settings.load()
 
-    load_dotenv()
+    # Validate configuration before proceeding
+    settings.validate_production_config()
 
-    flask_env = os.environ.get("FLASK_ENV", "production")
+    app.config.from_object(settings.to_flask_config())
 
-    path = config_path or os.environ.get("APP_TABS_CONFIG")
-    if not path:
-        raise ConfigLoadFailed("APP_TABS_CONFIG environment variable is required")
+    # Initialize SpecTree for OpenAPI docs
+    from app.utils.spectree_config import configure_spectree
 
-    tabs_config = load_tabs_config(path)
-    config_service = ConfigService(tabs_config.tabs)
-    status_broadcaster = StatusBroadcaster(config_service.tab_count())
-    kubernetes_service = KubernetesService(status_broadcaster=status_broadcaster)
+    configure_spectree(app)
 
-    heartbeat_interval = _resolve_heartbeat_interval(
-        flask_env=flask_env,
-        raw_value=os.environ.get("APP_SSE_HEARTBEAT_SECONDS"),
+    # --- Hook 1: Create service container ---
+    from app.startup import create_container
+
+    # Load app-specific configuration alongside infrastructure settings
+    if app_settings is None:
+        app_settings = AppSettings.load(flask_env=settings.flask_env)
+
+    container = create_container()
+    container.config.override(settings)
+    container.app_config.override(app_settings)
+
+    # Wire container to all API modules via package scanning
+    container.wire(packages=['app.api'])
+
+    app.container = container
+
+    # Configure CORS
+    CORS(app, origins=settings.cors_origins)
+
+    # Initialize correlation ID tracking
+    from app.utils import _init_request_id
+    _init_request_id(app)
+
+    # Set up log capture handler in testing mode
+    if settings.is_testing:
+        from app.utils.log_capture import LogCaptureHandler
+        log_handler = LogCaptureHandler.get_instance()
+
+        # Set lifecycle coordinator for connection_close events
+        lifecycle_coordinator = container.lifecycle_coordinator()
+        log_handler.set_lifecycle_coordinator(lifecycle_coordinator)
+
+        # Attach to root logger
+        root_logger = logging.getLogger()
+        root_logger.addHandler(log_handler)
+        root_logger.setLevel(logging.INFO)
+
+        app.logger.info("Log capture handler initialized for testing mode")
+
+    # Register error handlers: core + business (template), then app-specific hook
+    from app.utils.flask_error_handlers import (
+        register_business_error_handlers,
+        register_core_error_handlers,
     )
 
-    allowed_origins = parse_allowed_origins(os.environ.get("APP_ALLOWED_ORIGINS"))
-    if allowed_origins:
-        configure_cors(app, allowed_origins)
+    register_core_error_handlers(app)
+    register_business_error_handlers(app)
 
-    auth_disabled = os.environ.get("APP_AUTH_DISABLED", "").lower() in {"1", "true", "yes", "on"}
-    auth_token = os.environ.get("APP_AUTH_TOKEN")
-    auth_cookie_name = os.environ.get("APP_AUTH_COOKIE_NAME", "z2m_auth")
-    jwt_secret = os.environ.get("APP_AUTH_JWT_SECRET") or auth_token or ""
+    # --- Hook 2: App-specific error handlers ---
+    from app.startup import register_error_handlers
 
-    if not auth_disabled and not auth_token:
-        raise AuthConfigError("APP_AUTH_TOKEN environment variable is required when authentication is enabled")
+    register_error_handlers(app)
 
-    secret_key = os.environ.get("APP_SECRET_KEY") or (jwt_secret if jwt_secret else None)
-    if secret_key:
-        app.secret_key = secret_key
+    # Register main API blueprint (includes auth hooks and auth_bp)
+    from app.api import api_bp
 
-    secure_cookies = flask_env.lower() == "production"
+    # --- Hook 3: App-specific blueprint registrations ---
+    from app.startup import register_blueprints
 
-    auth_manager = AuthManager(
-        AuthConfig(
-            login_token=auth_token,
-            cookie_name=auth_cookie_name,
-            jwt_secret=jwt_secret,
-            disabled=auth_disabled,
-            secure_cookies=secure_cookies,
-        )
-    )
+    register_blueprints(api_bp, app)
 
-    app.extensions.setdefault("z2m", {})
-    app.extensions["z2m"].update(
-        {
-            "config_service": config_service,
-            "status_broadcaster": status_broadcaster,
-            "kubernetes_service": kubernetes_service,
-            "auth_manager": auth_manager,
-            "sse_heartbeat_seconds": heartbeat_interval,
-        }
-    )
+    app.register_blueprint(api_bp)
 
-    app.config.setdefault("SSE_HEARTBEAT_SECONDS", heartbeat_interval)
+    # Register template blueprints directly on the app (not under /api)
+    # These are for internal cluster use only and should not be publicly proxied
+    from app.api.health import health_bp
+    from app.api.metrics import metrics_bp
 
-    spectree = SpecTree("flask", title="Z2M Wrapper API", version="1.0.0")
-    api_blueprint = create_api_blueprint(
-        config_service=config_service,
-        kubernetes_service=kubernetes_service,
-        status_broadcaster=status_broadcaster,
-        auth_manager=auth_manager,
-        spectree=spectree,
-        status_heartbeat_interval=heartbeat_interval,
-    )
-    app.register_blueprint(api_blueprint)
-    spectree.register(app)
+    app.register_blueprint(health_bp)
+    app.register_blueprint(metrics_bp)
+
+    # Always register testing blueprints (runtime check handles access control)
+    from app.api.testing_logs import testing_logs_bp
+    app.register_blueprint(testing_logs_bp)
+
+    from app.api.testing_sse import testing_sse_bp
+    app.register_blueprint(testing_sse_bp)
+
+    # Register SSE Gateway callback blueprint
+    from app.api.sse import sse_bp
+    app.register_blueprint(sse_bp)
+
+    # Register testing auth endpoints (runtime check handles access control)
+    from app.api.testing_auth import testing_auth_bp
+    app.register_blueprint(testing_auth_bp)
+
+    # Start background services only when not in CLI mode
+    if not skip_background_services:
+        # Start temp file manager cleanup thread during app creation
+        temp_file_manager = container.temp_file_manager()
+        temp_file_manager.start_cleanup_thread()
+
+        # Initialize FrontendVersionService singleton to register its observer callback
+        # with SSEConnectionManager. Must happen before fire_startup().
+        container.frontend_version_service()
+
+        # Signal that application startup is complete. Services that registered
+        # for STARTUP notifications will be invoked here.
+        container.lifecycle_coordinator().fire_startup()
 
     return app
-
-
-def _resolve_heartbeat_interval(*, flask_env: str, raw_value: str | None) -> float:
-    """Return a positive heartbeat interval based on environment defaults."""
-
-    default = 5.0 if flask_env.lower() == "development" else 30.0
-    if raw_value is None or not raw_value.strip():
-        return default
-    try:
-        interval = float(raw_value)
-    except ValueError as exc:  # pragma: no cover - defensive guard
-        raise ConfigError("APP_SSE_HEARTBEAT_SECONDS must be a positive number") from exc
-    if interval <= 0:
-        raise ConfigError("APP_SSE_HEARTBEAT_SECONDS must be greater than zero")
-    return interval

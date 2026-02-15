@@ -1,0 +1,17 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.4
+_src_path: .
+author_email: pvginkel@gmail.com
+author_name: Pieter van Ginkel
+backend_port: 5000
+database_name: zigbee-control
+image_name: registry:5000/zigbee-control
+project_description: Zigbee2MQTT multi-instance control panel
+project_name: zigbee-control
+repo_url: https://github.com/pvginkel/ZigbeeControl.git
+s3_bucket_name: zigbee-control-attachments
+testing_port_offset: 10
+use_database: false
+use_oidc: true
+use_s3: false
+use_sse: true
