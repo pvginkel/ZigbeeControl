@@ -2,29 +2,28 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import threading
 import time
-import os
-import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
-from kubernetes import client, watch, config
+from kubernetes import client, config, watch
 from kubernetes.client import ApiException
-from kubernetes.config.config_exception import ConfigException
 
-from app.schemas.config import TabConfig
-from app.schemas.status import StatusPayload, StatusState
-from app.services.exceptions import (
+from app.exceptions import (
     RestartFailed,
     RestartInProgress,
     RestartTimeout,
 )
-from app.services.status_broadcaster import StatusBroadcaster
+from app.schemas.config import TabConfig
+from app.schemas.status import StatusPayload, StatusState
+from app.services.tab_status_service import TabStatusService
 
 logger = logging.getLogger(__name__)
 
-DeploymentKey = Tuple[str, str]
+DeploymentKey = tuple[str, str]
 
 
 class KubernetesService:
@@ -34,17 +33,17 @@ class KubernetesService:
 
     def __init__(
         self,
-        status_broadcaster: StatusBroadcaster,
+        tab_status_service: TabStatusService,
         *,
         apps_api: client.AppsV1Api | None = None,
         watch_factory: type[watch.Watch] | None = None,
         restart_timeout: int = 180,
     ) -> None:
-        self._status_broadcaster = status_broadcaster
+        self._tab_status_service = tab_status_service
         self._watch_factory = watch_factory or watch.Watch
         self._restart_timeout = restart_timeout
         self._lock = threading.Lock()
-        self._inflight: Dict[DeploymentKey, threading.Thread] = {}
+        self._inflight: dict[DeploymentKey, threading.Thread] = {}
 
         if apps_api:
             self._apps_api = apps_api
@@ -88,7 +87,7 @@ class KubernetesService:
             key[0],
             key[1],
         )
-        self._status_broadcaster.emit(
+        self._tab_status_service.emit(
             tab_index,
             StatusPayload(state=StatusState.RESTARTING),
         )
@@ -114,11 +113,11 @@ class KubernetesService:
                 self._restart_timeout,
                 exc_info=timeout_exc,
             )
-            self._status_broadcaster.emit(
+            self._tab_status_service.emit(
                 tab_index,
                 StatusPayload(state=StatusState.ERROR, message=str(timeout_exc)),
             )
-        except (RestartFailed, ApiException, Exception) as exc:  # broad catch to surface message via SSE
+        except (RestartFailed, ApiException, Exception) as exc:
             message = str(exc)
             if not isinstance(exc, RestartFailed):
                 message = f"restart failed: {message}"
@@ -128,7 +127,7 @@ class KubernetesService:
                 deployment,
                 message,
             )
-            self._status_broadcaster.emit(
+            self._tab_status_service.emit(
                 tab_index,
                 StatusPayload(state=StatusState.ERROR, message=message),
             )
@@ -138,7 +137,7 @@ class KubernetesService:
                 namespace,
                 deployment,
             )
-            self._status_broadcaster.emit(
+            self._tab_status_service.emit(
                 tab_index,
                 StatusPayload(state=StatusState.RUNNING),
             )
@@ -150,7 +149,7 @@ class KubernetesService:
             )
 
     def _trigger_restart(self, namespace: str, deployment: str) -> int:
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         body = {
             "spec": {
                 "template": {
@@ -186,7 +185,7 @@ class KubernetesService:
                 namespace=namespace,
                 deployment=deployment,
             ) from exc
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc:
             logger.exception(
                 "Unexpected error while triggering restart for %s/%s",
                 namespace,
@@ -199,7 +198,7 @@ class KubernetesService:
             ) from exc
 
         try:
-            deployment_obj = self._apps_api.read_namespaced_deployment_status(  # type: ignore[attr-defined]
+            deployment_obj = self._apps_api.read_namespaced_deployment_status(
                 name=deployment,
                 namespace=namespace,
             )
@@ -214,7 +213,7 @@ class KubernetesService:
                 namespace=namespace,
                 deployment=deployment,
             ) from exc
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc:
             logger.exception(
                 "Unexpected error reading deployment status for %s/%s",
                 namespace,
@@ -289,7 +288,7 @@ class KubernetesService:
         finally:
             try:
                 watcher.stop()
-            except Exception:  # pragma: no cover - best effort cleanup
+            except Exception:
                 pass
         logger.debug(
             "Deployment %s/%s did not become ready within timeout",
@@ -316,7 +315,7 @@ class KubernetesService:
             return None
 
         items = getattr(obj, "items", None)
-        if isinstance(items, (list, tuple)):
+        if isinstance(items, list | tuple):
             return items[0] if items else None
 
         return obj
@@ -372,7 +371,6 @@ class KubernetesService:
             )
             if cond_gen is None or cond_gen >= target_generation:
                 return True
-        # Fallback to counts when no conditions reported.
         return bool((ready and ready > 0) or (available and available > 0))
 
     @staticmethod

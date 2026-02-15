@@ -1,34 +1,116 @@
-[build-system]
-requires = ["poetry-core>=1.9.0"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.poetry]
-name = "z2m-wrapper-backend"
-packages = [{ include = "app" }]
+name = "zigbee-control"
 version = "0.1.0"
-description = "Flask backend for the Z2M Wrapper project"
-authors = ["Z2M Wrapper Team <ops@example.com>"]
-license = "MIT"
+description = "Zigbee2MQTT multi-instance control panel"
+authors = ["Pieter van Ginkel <pvginkel@gmail.com>"]
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = ">=3.10"
-Flask = ">=3.0.0,<4"
-pydantic = ">=2.6.0,<3"
-spectree = ">=2.0.0,<3"
-PyYAML = ">=6.0"
-kubernetes = ">=28.0.0,<29"
-python-dotenv = ">=1.0.0,<2"
-waitress = ">=2.1,<3"
-PyJWT = "^2.8"
-
-[tool.poetry.group.dev.dependencies]
-pytest = ">=7.4"
-pytest-mock = ">=3.12"
+packages = [{include = "app"}]
 
 [tool.poetry.scripts]
+cli = "app.cli:main"
 dev = "run:main"
 
+[tool.poetry.dependencies]
+python = "^3.13"
+flask = "^3.0.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+spectree = "^1.2.0"
+flask-cors = "^4.0.0"
+waitress = "^3.0.0"
+paste = "^3.10.1"
+dependency-injector = "^4.48.1"
+requests = "^2.31.0"
+prometheus-flask-exporter = "^0.23.0"
+python-dotenv = "^1.0.0"
+pyjwt = "^2.11.0"
+cryptography = "^46.0.4"
+httpx = "^0.28.1"
+itsdangerous = "^2.1.0"
+kubernetes = ">=28.0.0,<29"
+PyYAML = ">=6.0"
+
+[tool.poetry.group.dev.dependencies]
+copier = "^9.0.0"
+ruff = "^0.11.0"
+mypy = "^1.8.0"
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+types-flask = "^1.1.0"
+types-flask-cors = "^4.0.0"
+types-requests = "^2.31.0"
+types-waitress = "^3.0.1.20250801"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+    "W191", # indentation contains tabs
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.13"
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+ignore_errors = true
+
+
 [tool.pytest.ini_options]
-addopts = "-q"
-pythonpath = ["."]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v"
+markers = [
+    "integration: marks tests as integration tests (requires external dependencies)",
+    "slow: marks tests as slow running tests"
+]
+filterwarnings = [
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+    "ignore::pluggy._warnings.PluggyTeardownRaisedWarning",
+    "ignore::DeprecationWarning:pydantic.*"
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]

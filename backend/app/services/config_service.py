@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Iterable, List
+from collections.abc import Iterable
 
+from app.exceptions import TabNotFound, TabNotRestartable
 from app.schemas.config import ConfigResponse, TabConfig, TabResponse
-from app.services.exceptions import TabNotFound, TabNotRestartable
 
 
 class ConfigService:
@@ -19,7 +19,7 @@ class ConfigService:
     def tab_count(self) -> int:
         return len(self._tabs)
 
-    def get_tabs(self) -> List[TabConfig]:
+    def get_tabs(self) -> list[TabConfig]:
         return [tab.model_copy(deep=True) for tab in self._tabs]
 
     def get_tab(self, idx: int) -> TabConfig:

@@ -1,0 +1,111 @@
+"""Dependency injection container for services."""
+
+from dependency_injector import containers, providers
+
+from app.app_config import AppSettings
+from app.config import Settings
+from app.services.auth_service import AuthService
+from app.services.config_service import ConfigService
+from app.services.frontend_version_service import FrontendVersionService
+from app.services.health_service import HealthService
+from app.services.kubernetes_service import KubernetesService
+from app.services.metrics_service import MetricsService
+from app.services.oidc_client_service import OidcClientService
+from app.services.sse_connection_manager import SSEConnectionManager
+from app.services.tab_status_service import TabStatusService
+from app.services.task_service import TaskService
+from app.services.testing_service import TestingService
+from app.utils.config_loader import load_tabs_config
+from app.utils.lifecycle_coordinator import LifecycleCoordinator
+from app.utils.temp_file_manager import TempFileManager
+
+
+def _create_config_service(app_cfg: AppSettings) -> ConfigService:
+    tabs_config = load_tabs_config(app_cfg.tabs_config_path)
+    return ConfigService(tabs_config.tabs)
+
+
+class ServiceContainer(containers.DeclarativeContainer):
+    """Container for service dependency injection."""
+
+    # Configuration providers
+    config = providers.Dependency(instance_of=Settings)
+    app_config = providers.Dependency(instance_of=AppSettings)
+
+    # Lifecycle coordinator - manages startup and graceful shutdown
+    lifecycle_coordinator = providers.Singleton(
+        LifecycleCoordinator,
+        graceful_shutdown_timeout=config.provided.graceful_shutdown_timeout,
+    )
+
+    # Health service - callback registry for health checks
+    health_service = providers.Singleton(
+        HealthService,
+        lifecycle_coordinator=lifecycle_coordinator,
+        settings=config,
+    )
+
+    # Temp file manager
+    temp_file_manager = providers.Singleton(
+        TempFileManager,
+        lifecycle_coordinator=lifecycle_coordinator,
+    )
+
+    # Metrics service - background thread for Prometheus metrics
+    metrics_service = providers.Singleton(
+        MetricsService,
+        container=providers.Self(),
+        lifecycle_coordinator=lifecycle_coordinator,
+    )
+
+    # Auth services - OIDC authentication
+    auth_service = providers.Singleton(AuthService, config=config)
+    oidc_client_service = providers.Singleton(OidcClientService, config=config)
+    testing_service = providers.Factory(TestingService)
+
+    # SSE connection manager (always included - TaskService depends on it)
+    sse_connection_manager = providers.Singleton(
+        SSEConnectionManager,
+        gateway_url=config.provided.sse_gateway_url,
+        http_timeout=2.0,
+    )
+
+    # Task service - in-memory task management
+    task_service = providers.Singleton(
+        TaskService,
+        lifecycle_coordinator=lifecycle_coordinator,
+        sse_connection_manager=sse_connection_manager,
+        max_workers=config.provided.task_max_workers,
+        task_timeout=config.provided.task_timeout_seconds,
+        cleanup_interval=config.provided.task_cleanup_interval_seconds,
+    )
+
+    # Frontend version service - SSE version notifications
+    frontend_version_service = providers.Singleton(
+        FrontendVersionService,
+        settings=config,
+        lifecycle_coordinator=lifecycle_coordinator,
+        sse_connection_manager=sse_connection_manager,
+    )
+
+    # === App-specific services ===
+
+    # Config service - loads and provides tab configuration
+    config_service = providers.Singleton(
+        _create_config_service,
+        app_cfg=app_config,
+    )
+
+    # Tab status service - tracks per-tab status and delivers events through SSE Gateway
+    tab_status_service = providers.Singleton(
+        TabStatusService,
+        config_service=config_service,
+        sse_connection_manager=sse_connection_manager,
+    )
+
+    # Kubernetes service - handles rollout restarts
+    kubernetes_service = providers.Singleton(
+        KubernetesService,
+        tab_status_service=tab_status_service,
+        restart_timeout=app_config.provided.k8s_restart_timeout,
+    )
