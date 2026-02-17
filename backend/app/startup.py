@@ -3,6 +3,7 @@
 Hook points called by create_app():
   - create_container()
   - register_blueprints()
+  - register_root_blueprints()
   - register_error_handlers()
 
 Hook points called by CLI command handlers:
@@ -50,6 +51,11 @@ def register_blueprints(api_bp: Blueprint, app: Flask) -> None:
     # Force TabStatusService singleton initialization so it registers the
     # on_connect callback with the SSE connection manager.
     app.container.tab_status_service()
+
+
+def register_root_blueprints(app: Flask) -> None:
+    """Register app-specific blueprints directly on the app (not under /api prefix)."""
+    pass
 
 
 def register_error_handlers(app: Flask) -> None:
