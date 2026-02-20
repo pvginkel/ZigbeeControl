@@ -1,15 +1,25 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
+import { isTestMode } from '@/lib/config/test-mode'
+import { setupConsolePolicy } from '@/lib/test/console-policy'
+import { setupErrorInstrumentation } from '@/lib/test/error-instrumentation'
 
-const queryClient = new QueryClient()
+// Setup test mode infrastructure
+if (isTestMode()) {
+  setupConsolePolicy();
+  setupErrorInstrumentation();
+}
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
+  (
+    import.meta.env.DEV || import.meta.env.VITE_TEST_MODE ? (
+      <StrictMode>
+        <App />
+      </StrictMode>
+    ) : (
       <App />
-    </QueryClientProvider>
-  </StrictMode>,
+    )
+  )
 )

@@ -1,74 +1,32 @@
-import { useEffect } from 'react'
-import AppShell from './components/AppShell'
-import { useConfigQuery } from './hooks/useConfigQuery'
-import { useAuth } from './hooks/useAuth'
-import { useTabsStore } from './state/useTabsStore'
+import { createRouter, RouterProvider } from '@tanstack/react-router'
+
+// Import the generated route tree
+import { routeTree } from './routeTree.gen'
+import { isTestMode } from '@/lib/config/test-mode'
+import { setupRouterInstrumentation } from '@/lib/test/router-instrumentation'
+import { CorrelationProvider } from '@/contexts/correlation-context'
+
+// Create a new router instance
+const router = createRouter({ routeTree })
+
+// Setup router instrumentation in test mode
+if (isTestMode()) {
+  setupRouterInstrumentation(router);
+}
+
+// Register the router instance for type safety
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
 
 function App() {
-  const { isChecking, isAuthenticated, authError, refetchAuth, markUnauthenticated } = useAuth()
-  const { data, isLoading, isError, error, refetch } = useConfigQuery({
-    enabled: isAuthenticated,
-    onUnauthorized: markUnauthenticated,
-  })
-  const initialize = useTabsStore((state) => state.initialize)
-
-  useEffect(() => {
-    if (isAuthenticated && data) {
-      initialize(data.tabs)
-    }
-  }, [data, initialize, isAuthenticated])
-
-  useEffect(() => {
-    if (!isChecking && !isAuthenticated && !authError) {
-      window.location.href = `/api/auth/login?redirect=${encodeURIComponent(window.location.href)}`
-    }
-  }, [isChecking, isAuthenticated, authError])
-
-  if (isChecking || (!isAuthenticated && !authError)) {
-    return <div className="app-feedback" />
-  }
-
-  if (authError) {
-    const message = authError instanceof Error ? authError.message : 'Failed to verify authentication'
-    return (
-      <div className="app-feedback" role="alert">
-        <p>{message}</p>
-        <button type="button" onClick={() => refetchAuth()}>
-          Retry
-        </button>
-      </div>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="app-feedback" role="status">
-        Loading configuration…
-      </div>
-    )
-  }
-
-  if (isError) {
-    const message = error instanceof Error ? error.message : 'Failed to load configuration'
-    return (
-      <div className="app-feedback" role="alert">
-        <p>{message}</p>
-        <button type="button" onClick={() => refetch()}>
-          Retry
-        </button>
-      </div>
-    )
-  }
-
-  if (!data || data.tabs.length === 0) {
-    return (
-      <div className="app-feedback" role="status">
-        No tabs configured
-      </div>
-    )
-  }
-
-  return <AppShell tabs={data.tabs} />
+  return (
+    <CorrelationProvider>
+      <RouterProvider router={router} />
+    </CorrelationProvider>
+  )
 }
 
 export default App

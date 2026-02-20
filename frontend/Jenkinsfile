@@ -10,7 +10,9 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko') {
                 url: 'https://github.com/pvginkel/ZigbeeControlUI.git'
         }
 
-        stage("Building ZigbeeControl UI") {
+        stage("Building zigbee-control") {
+            sh 'git rev-parse HEAD > git-rev'
+
             container('kaniko') {
                 helmCharts.kaniko([
                     "registry:5000/zigbee-control-ui:${currentBuild.number}",

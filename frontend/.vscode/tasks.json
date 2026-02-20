@@ -17,14 +17,36 @@
         "showReuseMessage": false
       },
       "runOptions": {
-        "reevaluateOnRerun": true
+        "reevaluateOnRerun": true,
+        "instanceLimit": 999
       },
       "isBackground": true
     },
     {
       "label": "Server",
       "type": "shell",
-      "command": "pnpm dev",
+      "command": "scripts/dev-server.sh",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "icon": { "id": "server" },
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false,
+        "showReuseMessage": true
+      },
+      "runOptions": {
+        "reevaluateOnRerun": true,
+        "instanceLimit": 999
+      },
+      "isBackground": true
+    },
+    {
+      "label": "Docker Server",
+      "type": "shell",
+      "command": "scripts/run.sh",
       "options": {
         "cwd": "${workspaceFolder}"
       },

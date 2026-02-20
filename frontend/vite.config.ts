@@ -1,151 +1,140 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
-import { parse } from 'yaml'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
+import { execSync } from 'child_process'
+import fs from 'fs'
+import { loadAppProxies } from './vite-proxy-extensions'
 
-interface RawTabConfig {
-  iframeUrl?: string
-  proxyTarget?: string
-}
-
-interface RawAppConfig {
-  tabs?: RawTabConfig[]
-}
-
-function normalizeBasePath(input: string): string | null {
-  const trimmed = input.trim()
-  if (!trimmed) {
-    return null
-  }
-
-  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
-  if (withLeadingSlash === '/') {
-    return '/'
-  }
-
-  return withLeadingSlash.replace(/\/+$/, '')
-}
-
-function createProxyTable(configPath: string | undefined): Record<string, ProxyOptions> {
-  const proxyEntries: Record<string, ProxyOptions> = {}
-  if (!configPath) {
-    return proxyEntries
-  }
-
-  const resolvedPath = path.isAbsolute(configPath)
-    ? configPath
-    : path.resolve(process.cwd(), configPath)
-
-  if (!fs.existsSync(resolvedPath)) {
-    console.warn(`APP_TABS_CONFIG not found at ${resolvedPath}; skipping proxy setup`)
-    return proxyEntries
-  }
-
-  let parsed: RawAppConfig
-  try {
-    const fileContents = fs.readFileSync(resolvedPath, 'utf8')
-    parsed = parse(fileContents) as RawAppConfig
-  } catch (error) {
-    console.warn('Failed to load APP_TABS_CONFIG, skipping proxy setup', error)
-    return proxyEntries
-  }
-
-  parsed.tabs?.forEach((tab) => {
-    if (!tab || !tab.iframeUrl || !tab.proxyTarget) {
-      return
-    }
-
-    const basePath = normalizeBasePath(tab.iframeUrl)
-    if (!basePath) {
-      return
-    }
-
-    proxyEntries[basePath] = {
-      target: tab.proxyTarget,
-      changeOrigin: true,
-      ws: true,
-      rewriteWsOrigin: true,
-      secure: false,
-      rewrite: (incomingPath) => {
-        if (!incomingPath.startsWith(basePath)) {
-          return incomingPath
+function versionPlugin(): Plugin {
+  const getGitCommitId = () => {
+    try {
+      // First try to read from git-rev file (for Docker builds)
+      const gitRevFile = path.resolve(__dirname, 'git-rev')
+      if (fs.existsSync(gitRevFile)) {
+        const fileContent = fs.readFileSync(gitRevFile, 'utf8').trim()
+        if (fileContent) {
+          return fileContent
         }
-
-        const boundaryChar = incomingPath.charAt(basePath.length)
-        if (boundaryChar && boundaryChar !== '/' && boundaryChar !== '?') {
-          return incomingPath
-        }
-
-        const stripped = incomingPath.slice(basePath.length)
-        if (!stripped) {
-          return '/'
-        }
-
-        return stripped.startsWith('/') ? stripped : `/${stripped}`
-      },
-      headers: {
-        'X-Forwarded-Proto': 'http',
-      },
+      }
+      // Fallback to git command
+      return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
+    } catch (error) {
+      console.warn('Failed to get git commit:', error)
+      return 'unknown'
     }
-  })
-
-  return proxyEntries
-}
-
-// https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const configPath = env.APP_TABS_CONFIG
-  const proxy = createProxyTable(configPath)
-  const apiProxyTarget = env.API_PROXY_TARGET
-  const sseGatewayProxyTarget = env.SSE_GATEWAY_PROXY_TARGET
-
-  if (!configPath) {
-    console.info('[vite] APP_TABS_CONFIG not set; skipping iframe proxy setup')
-  } else if (Object.keys(proxy).length === 0) {
-    console.info(`[vite] no iframe proxy entries created from APP_TABS_CONFIG at ${configPath}`)
-  } else {
-    console.info('[vite] iframe proxy entries created from APP_TABS_CONFIG:', proxy)
-  }
-
-  if (sseGatewayProxyTarget) {
-    proxy['/api/sse'] = {
-      target: sseGatewayProxyTarget,
-      changeOrigin: true,
-      ws: true,
-      secure: false,
-      headers: {
-        'X-Forwarded-Proto': 'http',
-      },
-    }
-    console.info(`[vite] /api/sse requests proxied to ${sseGatewayProxyTarget}`)
-  }
-
-  if (apiProxyTarget) {
-    proxy['/api'] = {
-      target: apiProxyTarget,
-      changeOrigin: true,
-      ws: true,
-      secure: false,
-      headers: {
-        'X-Forwarded-Proto': 'http',
-      },
-    }
-    console.info(`[vite] /api requests proxied to ${apiProxyTarget}`)
-  } else {
-    console.info('[vite] API_PROXY_TARGET not set; /api requests will hit Vite directly')
   }
 
   return {
-    plugins: [react()],
-    server: {
-      host: true,
-      port: 3000,
-      allowedHosts: true,
-      // If you use HTTPS locally, set https: true and run code-server with TLS or let the proxy terminate TLS.
-      // https: true,
-      proxy,
+    name: 'version-plugin',
+    generateBundle() {
+      const gitCommitId = getGitCommitId()
+      const versionData = { version: gitCommitId }
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify(versionData, null, 2)
+      })
+    }
+  }
+}
+
+function backendProxyStatusPlugin(target: string): Plugin {
+  const probeUrl = new URL('/health/readyz', target).toString()
+
+  const checkBackend = async () => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 2000)
+    try {
+      const response = await fetch(probeUrl, { signal: controller.signal })
+      if (!response.ok) {
+        console.warn(
+          `[vite] Backend at ${target} responded with ${response.status}. ` +
+          'Ensure the backend is running or update BACKEND_URL.'
+        )
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown error'
+      console.warn(
+        `[vite] Unable to reach backend at ${target}: ${reason}. ` +
+        'Start the backend or set BACKEND_URL to a reachable URL.'
+      )
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  }
+
+  const safeCheck = () => {
+    checkBackend().catch(() => {})
+  }
+
+  return {
+    name: 'backend-proxy-status',
+    configureServer() { safeCheck() },
+    configurePreviewServer() { safeCheck() }
+  }
+}
+
+const backendProxyTarget = process.env.BACKEND_URL || 'http://localhost:5000'
+const gatewayProxyTarget = process.env.SSE_GATEWAY_URL || 'http://localhost:3001'
+
+export default defineConfig({
+  plugins: [tailwindcss(), react(), versionPlugin(), backendProxyStatusPlugin(backendProxyTarget)],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@/components': path.resolve(__dirname, './src/components'),
+      '@/routes': path.resolve(__dirname, './src/routes'),
+      '@/lib': path.resolve(__dirname, './src/lib'),
+      '@/hooks': path.resolve(__dirname, './src/hooks'),
+      '@/types': path.resolve(__dirname, './src/types'),
     },
+  },
+  server: {
+    host: true,
+    port: 3000,
+    allowedHosts: true,
+    proxy: {
+      ...loadAppProxies(),
+      '/api/sse': {
+        target: gatewayProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api': {
+        target: backendProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      }
+    },
+    watch: process.env.VITE_TEST_MODE === 'true' ? { ignored: ['**'] } : undefined
+  },
+  preview: {
+    proxy: {
+      ...loadAppProxies(),
+      '/api/sse': {
+        target: gatewayProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api': {
+        target: backendProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  },
+  define: {
+    'import.meta.env.VITE_TEST_MODE': process.env.NODE_ENV === 'production'
+      ? JSON.stringify('false')
+      : JSON.stringify(process.env.VITE_TEST_MODE || 'false'),
+  },
+  build: {
+    rollupOptions: {
+      external: process.env.NODE_ENV === 'production' && process.env.VITE_TEST_MODE === 'true'
+        ? ['./src/lib/test/*']
+        : []
+    },
+    chunkSizeWarningLimit: 2000
   }
 })
