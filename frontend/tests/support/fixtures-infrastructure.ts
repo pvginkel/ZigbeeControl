@@ -343,29 +343,21 @@ export const infrastructureFixtures = base.extend<InfrastructureFixtures, Intern
         };
 
         const seedDbPath = process.env.PLAYWRIGHT_SEEDED_SQLITE_DB;
-        if (!seedDbPath) {
-          backendLogs.dispose();
-          gatewayLogs.dispose();
-          frontendLogs.dispose();
-          await cleanupWorkerDb();
-          throw new Error(
-            'PLAYWRIGHT_SEEDED_SQLITE_DB is not set. Ensure global setup initialized the test database.'
-          );
-        }
-
-        try {
-          workerDbDir = await mkdtemp(
-            join(tmpdir(), `test-worker-${workerInfo.workerIndex}-`)
-          );
-          workerDbPath = join(workerDbDir, 'database.sqlite');
-          await copyFile(seedDbPath, workerDbPath);
-          backendLogs.log(`Using SQLite database copy at ${workerDbPath}`);
-        } catch (error) {
-          backendLogs.dispose();
-          gatewayLogs.dispose();
-          frontendLogs.dispose();
-          await cleanupWorkerDb();
-          throw error;
+        if (seedDbPath) {
+          try {
+            workerDbDir = await mkdtemp(
+              join(tmpdir(), `test-worker-${workerInfo.workerIndex}-`)
+            );
+            workerDbPath = join(workerDbDir, 'database.sqlite');
+            await copyFile(seedDbPath, workerDbPath);
+            backendLogs.log(`Using SQLite database copy at ${workerDbPath}`);
+          } catch (error) {
+            backendLogs.dispose();
+            gatewayLogs.dispose();
+            frontendLogs.dispose();
+            await cleanupWorkerDb();
+            throw error;
+          }
         }
 
         const backendPort = await getPort();
@@ -377,7 +369,7 @@ export const infrastructureFixtures = base.extend<InfrastructureFixtures, Intern
         process.env.SSE_GATEWAY_URL = gatewayUrl;
 
         const backendPromise = startBackend(workerInfo.workerIndex, {
-          sqliteDbPath: workerDbPath,
+          ...(workerDbPath ? { sqliteDbPath: workerDbPath } : {}),
           streamLogs: backendStreamLogs,
           port: backendPort,
           frontendVersionUrl: `http://127.0.0.1:${frontendPort}/version.json`,
