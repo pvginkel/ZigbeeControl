@@ -37,7 +37,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends tini netcat-openbsd \
    && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 5000
+EXPOSE 3201
 
 WORKDIR /app
 
