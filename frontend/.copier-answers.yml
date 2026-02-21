@@ -3,14 +3,14 @@ _commit: v0.8
 _src_path: ../../ModernAppTemplate/frontend
 author_email: admin@local
 author_name: Admin
-backend_port: 5000
-frontend_port: 3000
+backend_port: 3201
+frontend_port: 3200
 image_name: registry:5000/zigbee-control-ui
 project_description: Control panel for managing multiple Zigbee2MQTT instances
 project_name: zigbee-control
 project_title: ZigbeeControl
 repo_url: https://github.com/pvginkel/ZigbeeControlUI.git
-sse_gateway_port: 3001
+sse_gateway_port: 3202
 use_app_shell: false
 use_oidc: true
 use_sse: true
