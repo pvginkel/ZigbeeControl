@@ -54,7 +54,7 @@
     "globals": "^16.3.0",
     "openapi-typescript": "^7.0.0",
     "split2": "^4.2.0",
-    "ssegateway": "git+https://github.com/pvginkel/SSEGateway.git#stable",
+    "ssegateway": "github:pvginkel/SSEGateway#stable",
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
