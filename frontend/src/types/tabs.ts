@@ -6,7 +6,7 @@ export interface TabStatusEvent {
   message: string | null
 }
 
-export interface TabConfig {
+interface TabConfig {
   text: string
   iconUrl: string
   iframeUrl: string
@@ -16,8 +16,4 @@ export interface TabConfig {
 
 export interface UiTabConfig extends TabConfig {
   isRestartable: boolean
-}
-
-export interface ConfigResponse {
-  tabs: TabConfig[]
 }
