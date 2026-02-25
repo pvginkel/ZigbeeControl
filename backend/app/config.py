@@ -211,7 +211,7 @@ class Settings(BaseModel):
         """Check if running in production environment."""
         return self.flask_env == "production"
 
-    def set_engine_options_override(self, options: dict[str, Any]) -> None:
+    def set_engine_options_override(self, _options: dict[str, Any]) -> None:
         """Override SQLAlchemy engine options (used for testing with SQLite)."""
         pass
 
