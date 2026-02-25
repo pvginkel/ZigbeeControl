@@ -15,7 +15,7 @@ from app.services.config_service import ConfigService
 from app.utils.config_loader import load_tabs_config
 
 # Import all infrastructure fixtures
-from tests.conftest_infrastructure import *  # noqa: F401, F403
+from tests.conftest_infrastructure import *  # noqa: F403
 
 
 @pytest.fixture
