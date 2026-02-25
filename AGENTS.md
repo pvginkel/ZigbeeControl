@@ -51,10 +51,25 @@ This document distills the current product brief so agents and contributors stay
 - Frontend tests should cover tab switching, lazy iframe behaviour, restart button state changes, and SSE-driven updates (using mocks where appropriate).
 - Integration smoke tests may simulate the restart endpoint and SSE flow without reaching a real cluster (mock Kubernetes client).
 
+## Code Quality
+
+Before committing, run all checks with a single command:
+```bash
+poetry run check   # Runs ruff, mypy, vulture, and pytest
+```
+
+Or run individual tools:
+```bash
+poetry run ruff check .                                           # Linting
+poetry run mypy .                                                 # Type checking
+poetry run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
+poetry run pytest                                                 # Full test suite
+```
+
 ## Developer Workflow Checklist
 1. Load and understand the YAML config schema before implementing features.
 2. Build backend service/API logic with thorough tests for restart orchestration.
 3. Implement frontend tab mechanics and SSE handling with matching UI states.
 4. Verify end-to-end restart flow (happy path and timeout). Document any manual steps for the operator.
 5. Keep documentation synchronized with config changes or new behaviours.
-6. Run project commands through Poetry (e.g. `poetry run pytest`, `poetry run flask --help`).
+6. Run `poetry run check` before committing to verify linting, type checking, dead code detection, and tests pass.
