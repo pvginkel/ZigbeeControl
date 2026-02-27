@@ -155,6 +155,16 @@ def create_app(settings: "Settings | None" = None, app_settings: "AppSettings | 
     from app.api.testing_auth import testing_auth_bp
     app.register_blueprint(testing_auth_bp)
 
+    # --- Role-based access startup hooks ---
+    # Validate @allow_roles decorators against configured roles (fail fast on typos)
+    if settings.oidc_enabled:
+        from app.utils.auth import validate_allow_roles_at_startup
+        validate_allow_roles_at_startup(app, container.auth_service())
+
+    # Annotate OpenAPI spec with per-endpoint security information
+    from app.utils.spectree_config import annotate_openapi_security
+    annotate_openapi_security(app)
+
     # Start background services only when not in CLI mode
     if not skip_background_services:
         # Eagerly instantiate and start all registered background services
