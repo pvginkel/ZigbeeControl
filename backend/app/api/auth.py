@@ -162,7 +162,7 @@ def login(
     """Initiate OIDC login flow with PKCE.
 
     Generates authorization URL and redirects to OIDC provider.
-    Stores PKCE state in signed cookie.
+    PKCE state is encrypted into the OAuth state parameter.
 
     Query Parameters:
         redirect: URL to redirect to after successful login (required)
@@ -183,33 +183,20 @@ def login(
     # Validate redirect URL to prevent open redirect attacks
     validate_redirect_url(redirect_url, config.baseurl)
 
-    # Generate authorization URL with PKCE
-    authorization_url, auth_state = oidc_client_service.generate_authorization_url(
-        redirect_url
-    )
-
-    # Serialize auth state into signed cookie
-    signed_state = serialize_auth_state(auth_state, config.secret_key)
-
-    # Determine cookie security settings
-    cookie_secure = get_cookie_secure(config)
-
-    # Create response with redirect
-    response = make_response(redirect(authorization_url))
-
-    # Set auth state cookie (short-lived, for callback only)
-    response.set_cookie(
-        "auth_state",
-        signed_state,
-        httponly=True,
-        secure=cookie_secure,
-        samesite=config.oidc_cookie_samesite,
-        max_age=600,  # 10 minutes
+    # Generate authorization URL with PKCE.
+    # The auth state (containing the PKCE code_verifier, redirect URL, and
+    # nonce) is encrypted and carried as the OAuth ``state`` parameter instead
+    # of being stored in a cookie.  This avoids third-party cookie blocking
+    # when the app runs inside a cross-origin iframe (e.g. Home Assistant).
+    auth_state = oidc_client_service.create_auth_state(redirect_url)
+    encrypted_state = serialize_auth_state(auth_state, config.secret_key)
+    authorization_url = oidc_client_service.build_authorization_url(
+        auth_state, encrypted_state
     )
 
     logger.info("Login initiated: redirecting to OIDC provider")
 
-    return response
+    return redirect(authorization_url)
 
 
 @auth_bp.route("/callback", methods=["GET"])
@@ -246,16 +233,10 @@ def callback(
     if not state:
         raise ValidationException("Missing 'state' parameter in callback")
 
-    # Retrieve and verify auth state cookie
-    signed_state = request.cookies.get("auth_state")
-    if not signed_state:
-        raise ValidationException("Missing authentication state cookie")
-
-    auth_state = deserialize_auth_state(signed_state, config.secret_key)
-
-    # Verify state matches
-    if state != auth_state.nonce:
-        raise ValidationException("State parameter does not match")
+    # The ``state`` parameter carries the encrypted auth state (code_verifier,
+    # redirect URL, nonce).  Decrypt and verify it.  This replaces the former
+    # cookie-based approach which failed inside cross-origin iframes.
+    auth_state = deserialize_auth_state(state, config.secret_key)
 
     # Exchange authorization code for tokens
     token_response = oidc_client_service.exchange_code_for_tokens(
@@ -316,16 +297,6 @@ def callback(
             samesite=config.oidc_cookie_samesite,
             max_age=token_response.expires_in,
         )
-
-    # Clear auth state cookie
-    response.set_cookie(
-        "auth_state",
-        "",
-        httponly=True,
-        secure=cookie_secure,
-        samesite=config.oidc_cookie_samesite,
-        max_age=0,
-    )
 
     return response
 
