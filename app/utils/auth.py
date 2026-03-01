@@ -373,19 +373,18 @@ def deserialize_auth_state(encrypted_data: str, secret_key: str, max_age: int = 
         raise ValidationException("Malformed authentication state") from e
 
 
-def get_cookie_secure(config: Settings) -> bool:
-    """Determine if cookies should use Secure flag.
+def get_cookie_kwargs(config: Settings) -> dict[str, Any]:
+    """Return the common keyword arguments for ``response.set_cookie()``.
 
-    In the config system, oidc_cookie_secure is always resolved
-    (either explicit or inferred from baseurl), so we just return it.
-
-    Args:
-        config: Application settings
-
-    Returns:
-        True if cookies should use Secure flag, False otherwise
+    Centralises httponly / secure / samesite / partitioned so that every
+    call-site stays consistent.
     """
-    return config.oidc_cookie_secure
+    return {
+        "httponly": True,
+        "secure": config.oidc_cookie_secure,
+        "samesite": config.oidc_cookie_samesite,
+        "partitioned": config.oidc_cookie_partitioned,
+    }
 
 
 def validate_allow_roles_at_startup(app: Any, auth_service: AuthService) -> None:

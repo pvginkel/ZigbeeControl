@@ -22,3 +22,6 @@ conn_record  # unused variable
 
 # Function parameters kept for API compatibility
 encoding  # unused variable
+
+# OidcClientService convenience method (public API, used by generate_authorization_url)
+generate_authorization_url  # unused method

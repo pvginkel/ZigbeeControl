@@ -21,7 +21,7 @@ from app.services.testing_service import TestingService
 from app.utils.auth import (
     deserialize_auth_state,
     get_auth_context,
-    get_cookie_secure,
+    get_cookie_kwargs,
     get_token_expiry_seconds,
     public,
     serialize_auth_state,
@@ -253,8 +253,8 @@ def callback(
         auth_state.redirect_url,
     )
 
-    # Determine cookie security settings
-    cookie_secure = get_cookie_secure(config)
+    # Common cookie settings (httponly, secure, samesite, partitioned)
+    cookie_kw = get_cookie_kwargs(config)
 
     # Create response with redirect to original URL
     response = make_response(redirect(auth_state.redirect_url))
@@ -263,10 +263,8 @@ def callback(
     response.set_cookie(
         config.oidc_cookie_name,
         token_response.access_token,
-        httponly=True,
-        secure=cookie_secure,
-        samesite=config.oidc_cookie_samesite,
         max_age=token_response.expires_in,
+        **cookie_kw,
     )
 
     # Set refresh token cookie (if available)
@@ -281,10 +279,8 @@ def callback(
         response.set_cookie(
             config.oidc_refresh_cookie_name,
             token_response.refresh_token,
-            httponly=True,
-            secure=cookie_secure,
-            samesite=config.oidc_cookie_samesite,
             max_age=refresh_max_age,
+            **cookie_kw,
         )
 
     # Set ID token cookie for logout (if available)
@@ -292,10 +288,8 @@ def callback(
         response.set_cookie(
             "id_token",
             token_response.id_token,
-            httponly=True,
-            secure=cookie_secure,
-            samesite=config.oidc_cookie_samesite,
             max_age=token_response.expires_in,
+            **cookie_kw,
         )
 
     return response
@@ -324,9 +318,6 @@ def logout(
 
     # Validate redirect URL to prevent open redirect attacks
     validate_redirect_url(redirect_url, config.baseurl)
-
-    # Determine cookie security settings
-    cookie_secure = get_cookie_secure(config)
 
     # Get ID token for logout hint (to skip confirmation prompt)
     id_token = request.cookies.get("id_token")
@@ -377,34 +368,9 @@ def logout(
     # Create response with redirect
     response = make_response(redirect(final_redirect_url))
 
-    # Clear access token cookie
-    response.set_cookie(
-        config.oidc_cookie_name,
-        "",
-        httponly=True,
-        secure=cookie_secure,
-        samesite=config.oidc_cookie_samesite,
-        max_age=0,
-    )
-
-    # Clear refresh token cookie
-    response.set_cookie(
-        config.oidc_refresh_cookie_name,
-        "",
-        httponly=True,
-        secure=cookie_secure,
-        samesite=config.oidc_cookie_samesite,
-        max_age=0,
-    )
-
-    # Clear ID token cookie
-    response.set_cookie(
-        "id_token",
-        "",
-        httponly=True,
-        secure=cookie_secure,
-        samesite=config.oidc_cookie_samesite,
-        max_age=0,
-    )
+    # Clear auth cookies
+    cookie_kw = get_cookie_kwargs(config)
+    for name in (config.oidc_cookie_name, config.oidc_refresh_cookie_name, "id_token"):
+        response.set_cookie(name, "", max_age=0, **cookie_kw)
 
     return response
