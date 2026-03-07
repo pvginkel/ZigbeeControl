@@ -1,5 +1,5 @@
 import type { RouteTestEvent, ToastTestEvent } from '@/lib/test/test-events';
-import { test, expect } from '../support/fixtures';
+import { test, expect } from '../support/fixtures-infrastructure';
 import { emitTestEvent } from '../support/helpers/test-events';
 import { expectConsoleError, waitTestEvent } from '../support/helpers';
 
