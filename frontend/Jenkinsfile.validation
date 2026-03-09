@@ -98,6 +98,10 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
                                 - name: validation
                                   image: registry:5000/zigbee-control-validation:${currentBuild.number}
                                   imagePullPolicy: Always
+                                  resources:
+                                    requests:
+                                      cpu: "1"
+                                      memory: 3584Mi
                     """.stripIndent())
 
                     kubectl.waitForJob(jobName, k8sNamespace)
