@@ -2,7 +2,7 @@ import { test, expect } from '../support/fixtures'
 
 test.describe('Tab Manager', () => {
   test.beforeEach(async ({ auth, page }) => {
-    await auth.createSession({ name: 'Test User', email: 'test@example.com' })
+    await auth.createSession({ name: 'Test User', email: 'test@example.com', roles: ['editor'] })
     await page.goto('/')
   })
 
