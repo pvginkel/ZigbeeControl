@@ -94,6 +94,11 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
                           template:
                             spec:
                               restartPolicy: Never
+                              tolerations:
+                                - key: size
+                                  operator: Equal
+                                  value: large
+                                  effect: PreferNoSchedule
                               containers:
                                 - name: validation
                                   image: registry:5000/zigbee-control-validation:${currentBuild.number}
