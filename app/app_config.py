@@ -39,7 +39,12 @@ class AppSettings(BaseModel):
         """Load app settings from environment variables."""
         if env is None:
             env = AppEnvironment()
+
+        tabs_config_path = env.APP_TABS_CONFIG
+        if not tabs_config_path and flask_env == "testing":
+            tabs_config_path = str(_PROJECT_ROOT / "test" / "tabs.yaml")
+
         return cls(
-            tabs_config_path=env.APP_TABS_CONFIG,
+            tabs_config_path=tabs_config_path,
             k8s_restart_timeout=env.APP_K8S_RESTART_TIMEOUT,
         )
