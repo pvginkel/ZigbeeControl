@@ -11,16 +11,25 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko') {
         }
 
         stage("Building zigbee-control") {
+            def gitRev = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+
             container('kaniko') {
                 helmCharts.kaniko([
-                    "registry:5000/zigbee-control:${currentBuild.number}",
-                    "registry:5000/zigbee-control:latest"
+                    "registry:5000/zigbee-control:${currentBuild.number}"
                 ])
             }
+
+            writeJSON file: 'backend-build.json', json: [tag: ":${currentBuild.number}", gitRev: gitRev]
+            archiveArtifacts artifacts: 'backend-build.json', fingerprint: true
         }
 
-        stage('Deploy Helm charts') {
-            build job: 'HelmCharts', wait: false
+        stage('Start validation') {
+            build job: 'ZigbeeControlValidation',
+                wait: false,
+                parameters: [
+                    string(name: 'BACKEND_BUILD', value: "${currentBuild.number}"),
+                    string(name: 'TRIGGERED_BY', value: 'backend')
+                ]
         }
     }
 }
