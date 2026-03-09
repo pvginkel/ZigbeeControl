@@ -18,6 +18,5 @@ sse_gateway_port: 3202
 use_app_shell: false
 use_oidc: true
 use_sse: true
-validation_credential_id: ''
 validation_image_name: registry:5000/zigbee-control-validation
 validation_jenkins_job: ZigbeeControlValidation
