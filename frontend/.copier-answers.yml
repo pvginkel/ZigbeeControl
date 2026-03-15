@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v0.18.0
+_commit: v0.18.1
 _src_path: ../../ModernAppTemplate/frontend
 author_email: admin@local
 author_name: Admin
@@ -9,6 +9,7 @@ backend_port: 3201
 backend_repo_url: https://github.com/pvginkel/ZigbeeControl.git
 frontend_jenkins_job: ZigbeeControlUI
 frontend_port: 3200
+generate_validation_pipeline: true
 image_name: registry:5000/zigbee-control-ui
 project_description: Control panel for managing multiple Zigbee2MQTT instances
 project_name: zigbee-control
