@@ -14,7 +14,7 @@ type EmptyStateDefaultProps = {
   title: string;
   description?: string;
   icon?: React.ComponentType<{ className?: string }>;
-  action?: ActionConfig;
+  action?: ActionConfig | React.ReactNode;
   className?: string;
 };
 
@@ -28,6 +28,15 @@ type EmptyStateMinimalProps = {
 };
 
 type EmptyStateProps = EmptyStateDefaultProps | EmptyStateMinimalProps;
+
+function isActionConfig(action: ActionConfig | React.ReactNode): action is ActionConfig {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'label' in action &&
+    'onClick' in action
+  );
+}
 
 export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
   (props, ref) => {
@@ -73,15 +82,20 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         {/* Render description if provided */}
         {description && <p className={descriptionClasses}>{description}</p>}
 
-        {/* Render action button if provided and variant is default */}
+        {/* Render action: structured ActionConfig renders a Button, ReactNode renders directly */}
         {action && variant === 'default' && (
-          <Button
-            className="mt-4"
-            onClick={action.onClick}
-            data-testid={action.testId ?? `${testId}.cta`}
-          >
-            {action.label}
-          </Button>
+          <div className="mt-4">
+            {isActionConfig(action) ? (
+              <Button
+                onClick={action.onClick}
+                data-testid={action.testId ?? `${testId}.cta`}
+              >
+                {action.label}
+              </Button>
+            ) : (
+              action
+            )}
+          </div>
         )}
       </div>
     );

@@ -2,7 +2,7 @@
  * Skeleton loading primitives for consistent loading states across the application.
  *
  * Design Principles:
- * - NO className prop - all styling is encapsulated
+ * - Optional className prop for additional styling (margin, etc.)
  * - Variants provide shape presets (text, circular, rectangular, avatar)
  * - Width/height props accept Tailwind classes, CSS units, or numbers
  * - testId applied to outermost element without wrapper divs
@@ -27,6 +27,7 @@ interface SkeletonProps {
   width?: string | number;
   height?: string | number;
   testId?: string;
+  className?: string;
 }
 
 /**
@@ -93,6 +94,7 @@ export function Skeleton({
   width,
   height,
   testId,
+  className,
 }: SkeletonProps) {
   const defaults = VARIANT_DEFAULTS[variant];
 
@@ -100,13 +102,14 @@ export function Skeleton({
   const widthParsed = parseSizeProps(width, 'width');
   const heightParsed = parseSizeProps(height, 'height');
 
-  // Build className: base + rounded + dimensions
+  // Build className: base + rounded + dimensions + custom
   const classNames = [
     'bg-muted',
     'animate-pulse',
     defaults.rounded,
     widthParsed.className || (width === undefined ? defaults.width : undefined),
     heightParsed.className || (height === undefined ? defaults.height : undefined),
+    className,
   ]
     .filter(Boolean)
     .join(' ');
