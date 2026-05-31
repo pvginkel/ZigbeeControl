@@ -65,6 +65,7 @@ relations:
     target: svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807
     type: Association
     boundBy: "env:SSE_GATEWAY_URL"
+    boundByDefaultValue: "http://localhost:3202"
 
   # Consumes the cluster's Kubernetes API to perform rollout restarts.
   # Located via the in-cluster service account, not an env var — no boundBy.
