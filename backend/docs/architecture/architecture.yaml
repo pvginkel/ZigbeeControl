@@ -1,0 +1,74 @@
+schemaVersion: "0.1"
+producer: zigbee-control
+
+# Backend for the Zigbee2MQTT multi-instance control panel (Z2M Wrapper).
+# Serves tab configuration, optimistic Kubernetes rollout restarts, and live
+# status streaming to its single-page UI (a separate producer). The YAML here
+# is hand-authored and is the source of truth.
+
+applicationComponents:
+  - id: app:zigbee-control,c7890844-dbf2-4ea2-a468-c3280176d646
+    label: Zigbee Control
+    summary: >-
+      Flask backend for the Zigbee2MQTT control panel. Exposes tab
+      configuration, triggers Kubernetes rollout restarts for restartable
+      tabs, and streams live deployment status to the UI via the SSE gateway.
+    introduced: 2025-09-27
+    lifecycle: active
+    stereotype: SoftwareProduct
+    sourceRepository: git:pvginkel/ZigbeeControl
+    stats:
+      image: registry:5000/zigbee-control
+
+applicationServices:
+  - id: svc:zigbee-control-api,ce8d7938-5d7d-4eee-abab-294cf19315e7
+    label: Zigbee Control API
+    summary: >-
+      HTTP API under /api offering tab configuration, restart controls, and
+      a Server-Sent Events status stream for the control-panel UI.
+    introduced: 2025-09-27
+    lifecycle: active
+
+applicationInterfaces:
+  - id: if:zigbee-control-ui,a07f2ad9-836f-4704-80f7-6546b8b41099
+    label: Zigbee Control UI API
+    summary: >-
+      Endpoint surface consumed by the Z2M Wrapper single-page UI: config
+      fetch, restart trigger, and the per-tab status SSE stream.
+    introduced: 2025-09-27
+    lifecycle: active
+
+relations:
+  # The product realizes its exposed API service.
+  - id: rel:zigbee-control-realizes-api
+    source: app:zigbee-control,c7890844-dbf2-4ea2-a468-c3280176d646
+    target: svc:zigbee-control-api,ce8d7938-5d7d-4eee-abab-294cf19315e7
+    type: Realization
+
+  # The UI consumer class is assigned to the API service (one interface per
+  # distinct consumer; this API has a single consumer — its own SPA).
+  - id: rel:ui-interface-on-api
+    source: if:zigbee-control-ui,a07f2ad9-836f-4704-80f7-6546b8b41099
+    target: svc:zigbee-control-api,ce8d7938-5d7d-4eee-abab-294cf19315e7
+    type: Assignment
+
+  # Consumes an OIDC IdP for authentication — substitutable; env carries the issuer URL.
+  - id: rel:zigbee-control-consumes-iam
+    source: app:zigbee-control,c7890844-dbf2-4ea2-a468-c3280176d646
+    target: cap:iam
+    type: Association
+    boundBy: "env:OIDC_ISSUER_URL"
+
+  # Consumes the in-house SSE gateway to deliver status events to clients.
+  - id: rel:zigbee-control-consumes-sse-gateway
+    source: app:zigbee-control,c7890844-dbf2-4ea2-a468-c3280176d646
+    target: svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807
+    type: Association
+    boundBy: "env:SSE_GATEWAY_URL"
+
+  # Consumes the cluster's Kubernetes API to perform rollout restarts.
+  # Located via the in-cluster service account, not an env var — no boundBy.
+  - id: rel:zigbee-control-consumes-container-orchestration
+    source: app:zigbee-control,c7890844-dbf2-4ea2-a468-c3280176d646
+    target: cap:container-orchestration
+    type: Association
