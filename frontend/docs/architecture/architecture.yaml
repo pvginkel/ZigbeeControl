@@ -98,17 +98,17 @@ relations:
   # The app wraps the three sibling web UIs (two Z2M instances + code-server),
   # embedding each as a tab. These are the load-bearing edges that make the
   # wrapping explicit.
-  - id: rel:zigbee-control-ui-wraps-z2m1
-    source: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
-    target: svc:zigbee2mqtt1-web,941b28d4-b43a-472a-b45a-a1fb9ecb7cf2
-    type: Association
+  - id: rel:z2m1-serves-zigbee-control-ui
+    source: svc:zigbee2mqtt1-web,941b28d4-b43a-472a-b45a-a1fb9ecb7cf2
+    target: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
+    type: Serving
 
-  - id: rel:zigbee-control-ui-wraps-z2m2
-    source: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
-    target: svc:zigbee2mqtt2-web,1e695264-e611-44c7-b468-3e18fba4f6b3
-    type: Association
+  - id: rel:z2m2-serves-zigbee-control-ui
+    source: svc:zigbee2mqtt2-web,1e695264-e611-44c7-b468-3e18fba4f6b3
+    target: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
+    type: Serving
 
-  - id: rel:zigbee-control-ui-wraps-code-server
-    source: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
-    target: svc:code-server-web,6caab656-c41c-4586-b92c-660d6f476735
-    type: Association
+  - id: rel:code-server-serves-zigbee-control-ui
+    source: svc:code-server-web,6caab656-c41c-4586-b92c-660d6f476735
+    target: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
+    type: Serving
