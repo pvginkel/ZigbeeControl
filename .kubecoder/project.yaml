@@ -3,6 +3,7 @@ projects:
     description: >-
       ZigbeeControl monorepo — orchestration tooling (the suite runner behind
       `poetry run run-suite`), the shared Procfile.dev dev stack, and CI.
+    jenkins: ZigbeeControl/ZigbeeControl
     setup: cexec modern-app poetry install --no-interaction
 
   backend:
