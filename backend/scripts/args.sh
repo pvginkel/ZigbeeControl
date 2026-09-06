@@ -1,8 +1,0 @@
-mkdir -p $(pwd)/tmp
-
-NAME=zigbee-control
-BACKEND_PORT=3201
-TESTING_BACKEND_PORT=$((BACKEND_PORT + 10))
-ARGS="
-    -p ${BACKEND_PORT}:${BACKEND_PORT}
-"

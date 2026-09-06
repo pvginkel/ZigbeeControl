@@ -10,8 +10,10 @@ BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo $BACKEND_DIR
 
-# Load shared variables
-. "$SCRIPT_DIR/args.sh"
+# Default listen port when --port is not given. Was inherited from scripts/args.sh,
+# which went with the docker-run wrappers it existed for; the Playwright harness
+# (frontend/tests/support/process/servers.ts) always passes --port explicitly.
+TESTING_BACKEND_PORT=3211
 
 # Change to backend directory
 cd "$BACKEND_DIR" || {
