@@ -1,0 +1,32 @@
+# KubeCoder environment manifest for the ZigbeeControl monorepo.
+#
+# The repo has no data sidecars: the backend fronts Zigbee2MQTT deployments through
+# the Kubernetes API and keeps no database, and the Playwright harness boots the
+# backend and the SSE gateway per worker. So this file only asks for the toolchain
+# and the three dev ports.
+
+cwd: ZigbeeControl
+
+capabilities:
+  github: rw
+
+# One merged sidecar rather than `python` + `frontend`: the Playwright harness
+# boots the Flask backend per worker (frontend/tests/support/process/servers.ts),
+# so a single command needs both toolsets in the same container.
+tools:
+  - use: modern-app
+
+ports:
+  - name: frontend
+    port: 3200
+    type: http
+    sslOffload: true
+  - name: backend
+    port: 3201
+    type: http
+  - name: sse-gateway
+    port: 3202
+    type: http
+
+setup:
+  - kc project setup
