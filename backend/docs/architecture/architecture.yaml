@@ -3,8 +3,10 @@ producer: zigbee-control
 
 # Backend for the Zigbee2MQTT multi-instance control panel (Z2M Wrapper).
 # Serves tab configuration, optimistic Kubernetes rollout restarts, and live
-# status streaming to its single-page UI (a separate producer). The YAML here
-# is hand-authored and is the source of truth.
+# status streaming to its single-page UI. This artifact is the backend/ half
+# of the ZigbeeControl monorepo; the UI's artifact under frontend/ declares
+# the same zigbee-control producer. The YAML here is hand-authored and is the
+# source of truth.
 
 applicationComponents:
   - id: app:zigbee-control,c7890844-dbf2-4ea2-a468-c3280176d646

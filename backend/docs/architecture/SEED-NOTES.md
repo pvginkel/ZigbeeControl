@@ -1,5 +1,12 @@
 # SEED-NOTES — zigbee-control producer
 
+> **Superseded in part (monorepo merge).** ZigbeeControlUI has been merged into
+> this repo under `frontend/`, and its artifact now declares this same
+> `zigbee-control` producer — one repo publishes one producer. Where the notes
+> below call the SPA "a separate producer", that is no longer true. Everything
+> below is the original seeding record, kept as written; `architecture.yaml` is
+> authoritative.
+
 Headless seed of the first architecture artifact for the ZigbeeControl repo
 (Z2M Wrapper backend). Mode: **hand-authored** (no generator; the YAML is the
 source of truth). All decisions below were made without operator triage; open

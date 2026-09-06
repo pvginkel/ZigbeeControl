@@ -1,5 +1,12 @@
 # Seed notes — zigbee-control-ui
 
+> **Superseded in part (monorepo merge).** ZigbeeControlUI has been merged into
+> the ZigbeeControl monorepo under `frontend/`, and its artifact now declares
+> `producer: zigbee-control` with `sourceRepository: git:pvginkel/ZigbeeControl`
+> — one repo publishes one producer. The frontend → backend edge is therefore no
+> longer cross-producer (the SSE gateway edge still is). Everything below is the
+> original seeding record, kept as written; `architecture.yaml` is authoritative.
+
 First architecture artifact for the ZigbeeControlUI repo, seeded headless.
 Mode: **hand-authored** (no generator; the YAML is the source of truth).
 
