@@ -2,13 +2,28 @@
 #
 # The repo has no data sidecars: the backend fronts Zigbee2MQTT deployments through
 # the Kubernetes API and keeps no database, and the Playwright harness boots the
-# backend and the SSE gateway per worker. So this file only asks for the toolchain
-# and the three dev ports.
-
-cwd: ZigbeeControl
+# backend and the SSE gateway per worker. So this file only asks for the toolchain,
+# the spec repo and the three dev ports.
+#
+# No `imageBuilder:` either — both images (backend/Dockerfile, frontend/Dockerfile)
+# are built by CI with helmCharts.kaniko, and nothing builds them from in here.
 
 capabilities:
   github: rw
+  # No kubeconfig grant. Only POST /api/restart/<idx> reaches Kubernetes, lazily;
+  # pytest neuters the config loaders and injects a fake AppsV1Api, and the
+  # Playwright suite never clicks restart — so every gate is green without one, and
+  # so is the dev stack (tab status starts at `running` and only moves on a
+  # restart). Clicking Restart for real needs patch/get/list/watch on
+  # apps/v1 deployments in the `zigbee2mqtt` namespace, which the mounted
+  # read-only ~/.kube/config does not carry. Open operator question — see
+  # ONBOARDING-STATE.md.
+
+repos:
+  # The AI workflow's spec repo. Shared: one clone per project, mounted into every
+  # environment of it. /dev:onboard scaffolds its contents in a later run.
+  - url: https://github.com/pvginkel/ZigbeeControlSpecs
+    shared: true
 
 # One merged sidecar rather than `python` + `frontend`: the Playwright harness
 # boots the Flask backend per worker (frontend/tests/support/process/servers.ts),
