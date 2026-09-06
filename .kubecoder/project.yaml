@@ -42,15 +42,14 @@ projects:
     # `poetry run check` also runs pytest; lint calls the checkers directly so
     # linting and testing stay separate gates.
     #
-    # INTERIM: mypy is NOT in the gate. `poetry run mypy .` reports 36 pre-existing
-    # errors across 11 files — untyped `dict` generics in app/, missing stubs for
-    # yaml/PIL/kubernetes, and 8 in the merge's own scripts/arch-validate.py. Nothing
-    # here has ever enforced it: the Jenkinsfile runs only the two suites, so the debt
-    # accumulated unseen behind the repo's own `poetry run check`. Restore this line
-    # once the errors are cleared — see ONBOARDING-STATE.md.
-    #   - cexec modern-app poetry run mypy .
+    # mypy is red on 36 pre-existing errors across 11 files — untyped `dict`
+    # generics in app/, missing stubs for yaml/PIL/kubernetes, 8 in
+    # scripts/arch-validate.py — and is kept in the gate on purpose so the debt
+    # stays visible: Triage #864 carries it (including why removing types-flask
+    # makes it worse, 36 → 57).
     lint:
       - cexec modern-app poetry run ruff check .
+      - cexec modern-app poetry run mypy .
       - cexec modern-app poetry run vulture app/ vulture_whitelist.py --min-confidence 80
 
   frontend:
