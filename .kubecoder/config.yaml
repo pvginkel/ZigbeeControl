@@ -6,7 +6,7 @@
 # the spec repo and the three dev ports.
 #
 # No `imageBuilder:` either — both images (backend/Dockerfile, frontend/Dockerfile)
-# are built by CI with helmCharts.kaniko, and nothing builds them from in here.
+# are built by CI with helmCharts.kaniko, and nothing builds them from inside here.
 
 capabilities:
   github: rw
