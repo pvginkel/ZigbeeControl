@@ -1,0 +1,40 @@
+// Architecture producer pipeline for the federated Architecture-as-Code model.
+// One job, one producer (`zigbee-control`) covering the whole monorepo — both
+// artifacts below declare it, so they collect into the same producer directory:
+//   - backend/  — hand-authored: backend/docs/architecture/*.yaml (validation only).
+//   - frontend/ — hand-authored: frontend/docs/architecture/*.yaml (validation only).
+// Nothing is generated here, so the job needs no Vault credentials — only
+// outbound HTTPS to architecture.webathome.org for validation. arch-validate.py
+// is standard library only, so the python container needs no pip install.
+
+library identifier: 'JenkinsPipelineUtils', changelog: false
+
+podTemplate(inheritFrom: 'jenkins-agent', containers: [
+    containerTemplates.python('python')
+]) {
+    node(POD_LABEL) {
+        stage('Cloning repo') {
+            checkout scm
+        }
+
+        // dir() only moves the cwd for `sh` steps — archiveArtifacts globs always
+        // resolve workspace-root-relative, so they stay at the top level, prefixed.
+        stage('Validate backend architecture') {
+            dir('backend') {
+                container('python') {
+                    sh './scripts/arch-validate.py docs/architecture/*.yaml'
+                }
+            }
+            archiveArtifacts artifacts: 'backend/docs/architecture/*.yaml', fingerprint: true
+        }
+
+        stage('Validate frontend architecture') {
+            dir('frontend') {
+                container('python') {
+                    sh './scripts/arch-validate.py docs/architecture/*.yaml'
+                }
+            }
+            archiveArtifacts artifacts: 'frontend/docs/architecture/*.yaml', fingerprint: true
+        }
+    }
+}
