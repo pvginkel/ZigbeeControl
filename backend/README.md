@@ -4,12 +4,19 @@ Backend service exposing configuration, restart controls, and status streaming f
 
 ## Running
 
-1. Copy `.env.example` to `.env` and set `APP_TABS_CONFIG`, `APP_AUTH_TOKEN`, network bindings, and `FLASK_ENV` (`development` or `production`). Optionally override `APP_AUTH_COOKIE_NAME`, `APP_SECRET_KEY`, and `APP_SSE_HEARTBEAT_SECONDS` (defaults: 5 seconds in development, 30 seconds otherwise).
-2. Install dependencies and run:
+1. `kc project setup`, from the repository root, installs the dependencies for the
+   whole monorepo. It also seeds a minimal `backend/.env` pointing `APP_TABS_CONFIG`
+   at the checked-in `test/tabs.yaml`, because the app will not start without a tabs
+   file outside `FLASK_ENV=testing`. An existing `.env` is never overwritten.
+2. To go further, copy `.env.example` over it and set `APP_TABS_CONFIG`, network
+   bindings, `FLASK_ENV` (`development` or `production`) and the `OIDC_*` settings.
+3. Start the whole dev stack — backend on :3201, frontend on :3200, SSE gateway on
+   :3202 — with `scripts/dev.py` from the repository root. To run this service on its
+   own, from `backend/` (poetry lives in the `modern-app` tool container, not the dev
+   container):
 
 ```bash
-poetry install
-poetry run dev
+cexec modern-app poetry run dev
 ```
 
 In production mode (`FLASK_ENV=production`) the service is served by Waitress; development mode keeps the Flask reloader/debugger enabled.

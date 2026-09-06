@@ -53,17 +53,20 @@ This document distills the current product brief so agents and contributors stay
 
 ## Code Quality
 
-Before committing, run all checks with a single command:
+Before committing, run the monorepo's gates from the repository root:
 ```bash
-poetry run check   # Runs ruff, mypy, vulture, and pytest
+kc project lint    # ruff, mypy and vulture here; eslint, tsc and knip in frontend/
+kc project test    # this pytest suite, plus the frontend Playwright suite
 ```
 
-Or run individual tools:
+Or run individual tools from `backend/`. They live in the `modern-app` tool
+container — the dev container has no poetry:
 ```bash
-poetry run ruff check .                                           # Linting
-poetry run mypy .                                                 # Type checking
-poetry run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
-poetry run pytest                                                 # Full test suite
+cexec modern-app poetry run check                                           # ruff, mypy, vulture and pytest
+cexec modern-app poetry run ruff check .                                    # Linting
+cexec modern-app poetry run mypy .                                          # Type checking
+cexec modern-app poetry run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
+cexec modern-app poetry run pytest                                          # Full test suite
 ```
 
 ## Developer Workflow Checklist
@@ -72,7 +75,7 @@ poetry run pytest                                                 # Full test su
 3. Implement frontend tab mechanics and SSE handling with matching UI states.
 4. Verify end-to-end restart flow (happy path and timeout). Document any manual steps for the operator.
 5. Keep documentation synchronized with config changes or new behaviours.
-6. Run `poetry run check` before committing to verify linting, type checking, dead code detection, and tests pass.
+6. Run `kc project lint` and `kc project test` before committing to verify linting, type checking, dead code detection, and tests pass.
 
 ## Federated architecture model
 
