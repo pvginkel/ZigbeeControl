@@ -5,7 +5,7 @@ Quick orientation for agents; full specs live in the linked docs.
 ## Core References
 
 - `docs/product_brief.md` — authoritative scope, workflows, architecture, and success criteria for the wrapper UI.
-- Command templates for structured tasks: `docs/commands/create_brief.md`, `docs/commands/plan_feature.md`, `docs/commands/review_plan.md`, `docs/commands/code_review.md`.
+- `../CLAUDE.md` — monorepo orientation: the components, the gates, and where the dev pipeline's rules live.
 
 ## Product Snapshot
 
