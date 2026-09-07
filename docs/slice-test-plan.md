@@ -137,9 +137,13 @@ mcp__jenkins__getJob  jobFullName="ZigbeeControl/ZigbeeControl"
 
 Then push, and poll the same call until `lastBuild.number` has incremented, then
 `mcp__jenkins__getBuild` on that number until `building` is `false` and read `result`. A build takes
-about five and a half minutes. Without the Jenkins MCP tools in the session, the same two reads are
-`curl -s 'https://jenkins.webathome.org/job/ZigbeeControl/job/ZigbeeControl/api/json?tree=lastBuild[number,result,building]'`
-and `.../job/ZigbeeControl/job/ZigbeeControl/<n>/api/json?tree=number,result,building`.
+about five and a half minutes.
+
+**The MCP tools are the only way to read this from a session.** Jenkins' own JSON API
+(`.../job/ZigbeeControl/job/ZigbeeControl/api/json`) answers `403` to an unauthenticated request and
+this environment carries no Jenkins credentials, so there is no `curl` fallback. A session without
+those tools reports the pushed commit and the build it expects, and leaves the result to the
+operator — it does not claim the build passed.
 
 This is a **did-I-break-CI check, not a verification gate** — the slice was already proven in steps
 1–2. What it catches is the class of failure only CI can see: both Dockerfiles building end to end,
