@@ -31,23 +31,30 @@ repo root; the CLI is cwd-bound.
 ```bash
 kc project build      # frontend only: generate:api + tsr generate + pnpm check + vite build + verify
 kc project test       # backend pytest, frontend Playwright E2E
-kc project lint       # backend ruff + vulture, frontend eslint + tsc + knip
+kc project lint       # backend ruff + mypy + vulture, frontend eslint + tsc + knip
 ```
 
-All three must be green. `kc project build` is also what preflight demands, so a red build here
-means the slice never should have reached this phase.
+`build` and `test` must be green. `kc project build` is also what preflight demands, so a red build
+here means the slice never should have reached this phase.
 
-**Two gates are knowingly not wired, and neither is a regression from your slice:**
+**`kc project lint` is knowingly red, and that is the operator's standing decision.** `backend`
+mypy carries 36 pre-existing errors across 11 files, tracked as Trello card #864 ("ZigbeeControl:
+backend mypy is red"). It is kept in the gate on purpose so the debt stays visible — an earlier
+onboarding run commented it out to get a green chain and the operator put it back. **Do not comment
+it out.** What this phase checks instead:
 
-- **`backend` mypy is red** — 36 pre-existing errors across 11 files, tracked as Trello card #864
-  ("ZigbeeControl: backend mypy is red"). It is commented out of `lint:` in
-  `.kubecoder/project.yaml` rather than left failing, so `kc project lint` is green while
-  `cexec modern-app poetry run check` (the backend's own all-checks command) is not. If your slice
-  touched `backend/`, run `cexec modern-app sh -c 'cd backend && poetry run mypy .'` and check the
-  count has not *grown*; report it if it has. Delete this bullet when #864 is closed.
-- **`root` declares no `lint:`** — `tools/` and `scripts/` have never been linted, here or in CI.
-  `ruff check --isolated` there reports 14 findings, including a real `F821 Undefined name 'io'` at
-  `scripts/dev.py:41` and `:45`. Open with the operator; no card.
+- The failure is still exactly `Found 36 errors in 11 files (checked 70 source files)`. A higher
+  count is a regression from this slice and a blocking finding; a lower one is progress worth
+  naming in the close-out.
+- Everything else the verb runs — backend `ruff` and `vulture`, frontend `eslint`, `tsc` and `knip`
+  — is green. Those are real gates and a failure in any of them blocks.
+
+Replace this whole section with "`kc project lint` must be green" once #864 is closed. The backend's
+own `cexec modern-app poetry run check` is red for the same reason and always has been.
+
+One gate is genuinely absent: **`root` declares no `lint:`**. `tools/` and `scripts/` have never
+been linted, here or in CI. `ruff check --isolated` there reports 14 findings, including a real
+`F821 Undefined name 'io'` at `scripts/dev.py:41` and `:45`. Open with the operator; no card.
 
 ## 2. The live check
 

@@ -31,7 +31,7 @@ neither poetry nor pnpm. Run every `kc project` verb from the repo root — the 
 kc project setup                 # poetry + pnpm install, Playwright chromium, seeds both .env files
 kc project build                 # frontend build (the only component that builds)
 kc project test                  # backend pytest + frontend Playwright
-kc project lint                  # backend ruff + vulture, frontend eslint + tsc + knip
+kc project lint                  # backend ruff + mypy + vulture, frontend eslint + tsc + knip
 scripts/dev.py                   # the dev stack: frontend :3200, backend :3201, SSE gateway :3202
 ```
 
@@ -63,7 +63,9 @@ secrets, internal hostnames or non-public names in the tree.
 
 ## Two things that are knowingly red
 
-- **`backend` mypy** — 36 pre-existing errors; commented out of `lint:` rather than left failing.
-  Trello #864. `cexec modern-app poetry run check` is red for this reason and always has been.
+- **`backend` mypy, and therefore `kc project lint`** — 36 pre-existing errors across 11 files. It
+  is kept in the gate on purpose so the debt stays visible; Trello #864 carries it, including why
+  dropping `types-flask` makes it worse. Do not comment it out to get a green run. A slice that
+  touches `backend/` checks the count has not grown; everything else in `lint` is green.
 - **`root` has no `lint:`** — `tools/` and `scripts/` have never been linted, here or in CI. One
   real finding among them: a missing `import io` at `scripts/dev.py:41` and `:45`.
