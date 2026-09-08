@@ -127,6 +127,10 @@ Then push, and poll the same call until `lastBuild.number` has incremented, then
 `mcp__jenkins__getBuild` on that number until `building` is `false` and read `result`. A build takes
 about five and a half minutes.
 
+A `result` of `NOT_BUILT` with `Superseded by #<n>` in the log is not a failure: the job cancels an
+in-flight build when a newer push arrives, and `#<n>` is the build that replaced it. Read that build
+instead — the verdict on your commit is whichever build actually ran to completion over it.
+
 **The MCP tools are the only way to read this from a session.** Jenkins' own JSON API
 (`.../job/ZigbeeControl/job/ZigbeeControl/api/json`) answers `403` to an unauthenticated request and
 this environment carries no Jenkins credentials, so there is no `curl` fallback. A session without
