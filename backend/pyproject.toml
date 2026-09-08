@@ -36,11 +36,11 @@ ruff = "^0.11.0"
 mypy = "^1.8.0"
 pytest = "^7.4.0"
 pytest-cov = "^4.1.0"
-types-flask = "^1.1.0"
 types-flask-cors = "^4.0.0"
 types-requests = "^2.31.0"
 types-waitress = "^3.0.1.20250801"
 vulture = "^2.14"
+types-pyyaml = "^6.0.12.20260906"
 
 [build-system]
 requires = ["poetry-core"]
@@ -85,6 +85,11 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_return_any = true
 strict_equality = true
+
+# The kubernetes client ships neither inline types nor a py.typed marker.
+[[tool.mypy.overrides]]
+module = "kubernetes.*"
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "vulture_whitelist"
