@@ -37,20 +37,10 @@ kc project lint       # backend ruff + mypy + vulture, frontend eslint + tsc + k
 `build` and `test` must be green. `kc project build` is also what preflight demands, so a red build
 here means the slice never should have reached this phase.
 
-**`kc project lint` is knowingly red, and that is the operator's standing decision.** `backend`
-mypy carries 36 pre-existing errors across 11 files, tracked as Trello card #864 ("ZigbeeControl:
-backend mypy is red"). It is kept in the gate on purpose so the debt stays visible — an earlier
-onboarding run commented it out to get a green chain and the operator put it back. **Do not comment
-it out.** What this phase checks instead:
-
-- The failure is still exactly `Found 36 errors in 11 files (checked 70 source files)`. A higher
-  count is a regression from this slice and a blocking finding; a lower one is progress worth
-  naming in the close-out.
-- Everything else the verb runs — backend `ruff` and `vulture`, frontend `eslint`, `tsc` and `knip`
-  — is green. Those are real gates and a failure in any of them blocks.
-
-Replace this whole section with "`kc project lint` must be green" once #864 is closed. The backend's
-own `cexec modern-app poetry run check` is red for the same reason and always has been.
+**`kc project lint` must be green** — every component, every statement. No gate in this repo is
+known red, so a lint failure here is this slice's and blocks. Trello #864, the backend's 36
+pre-existing mypy errors, is paid off: the strict profile `backend/pyproject.toml` declares is met
+in full, and the backend's own `cexec modern-app poetry run check` is green with it.
 
 One gate is genuinely absent: **`root` declares no `lint:`**. `tools/` and `scripts/` have never
 been linted, here or in CI. `ruff check --isolated` there reports 14 findings, including a real

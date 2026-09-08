@@ -41,12 +41,6 @@ projects:
     test: cexec modern-app poetry run pytest
     # `poetry run check` also runs pytest; lint calls the checkers directly so
     # linting and testing stay separate gates.
-    #
-    # mypy is red on 36 pre-existing errors across 11 files — untyped `dict`
-    # generics in app/, missing stubs for yaml/PIL/kubernetes, 8 in
-    # scripts/arch-validate.py — and is kept in the gate on purpose so the debt
-    # stays visible: Triage #864 carries it (including why removing types-flask
-    # makes it worse, 36 → 57).
     lint:
       - cexec modern-app poetry run ruff check .
       - cexec modern-app poetry run mypy .

@@ -56,7 +56,6 @@ This document distills the current product brief so agents and contributors stay
 Before committing, run the monorepo's gates from the repository root:
 ```bash
 kc project lint    # ruff, mypy and vulture here; eslint, tsc and knip in frontend/
-                   # mypy is knowingly red — 36 pre-existing errors, Triage #864
 kc project test    # this pytest suite, plus the frontend Playwright suite
 ```
 
