@@ -45,7 +45,7 @@ in `../ZigbeeControlSpecs`, which is a separate git repo — commit there separa
   either changed.
 - **`frontend/README.md`** — still the stock Vite template. If a slice gives it a reason to become a
   real README, write one; do not rewrite it just because it is generic.
-- **`backend/AGENTS.md` / `frontend/AGENTS.md`** — the per-subproject orientation an agent reads
+- **`backend/CLAUDE.md` / `frontend/CLAUDE.md`** — the per-subproject orientation an agent reads
   before touching that component: the API surface, the expectations, the gates. Owed an update when
   any of those moved. Same one-screen discipline as `CLAUDE.md`.
 
@@ -53,7 +53,7 @@ in `../ZigbeeControlSpecs`, which is a separate git repo — commit there separa
 
 Each subproject carries `docs/architecture/architecture.yaml` for the federated
 Architecture-as-Code model, and the `AaC/ZigbeeControl` Jenkins job validates them. The rule for
-when to update them, and which agent does it, is already stated in each subproject's `AGENTS.md` —
+when to update them, and which agent does it, is already stated in each subproject's `CLAUDE.md` —
 follow it there rather than restating it. A slice that added or removed a service, a deployment or
 an external identity is the case that matters.
 

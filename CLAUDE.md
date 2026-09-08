@@ -55,7 +55,7 @@ secrets, internal hostnames or non-public names in the tree.
 - [`docs/slice-test-plan.md`](docs/slice-test-plan.md) — how a slice is verified, and what the push
   at the end of it deploys.
 - [`docs/slice-doc-plan.md`](docs/slice-doc-plan.md) — which doc surfaces a shipped slice updates.
-- `backend/AGENTS.md`, `frontend/AGENTS.md` — per-component orientation: API surface, expectations,
+- `backend/CLAUDE.md`, `frontend/CLAUDE.md` — per-component orientation: API surface, expectations,
   local commands.
 - `backend/docs/product_brief.md`, `frontend/docs/product_brief.md` — canonical on scope and
   behaviour.
