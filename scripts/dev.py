@@ -21,6 +21,7 @@ dependencies all three services need (the SSE gateway on :3202 runs the
 `ssegateway` frontend devDependency).
 """
 
+import io
 import os
 import re
 import signal
