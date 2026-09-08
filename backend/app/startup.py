@@ -17,11 +17,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from flask import Blueprint, Flask, jsonify
+from flask import Blueprint, Flask, Response, jsonify
 
 if TYPE_CHECKING:
     import click
 
+from app.app import App
 from app.exceptions import (
     ConfigError,
     RestartError,
@@ -39,9 +40,9 @@ def create_container() -> ServiceContainer:
     return ServiceContainer()
 
 
-def register_blueprints(api_bp: Blueprint, app: Flask) -> None:
+def register_blueprints(api_bp: Blueprint, app: App) -> None:
     """Register all app-specific blueprints on api_bp (under /api prefix)."""
-    if not api_bp._got_registered_once:  # type: ignore[attr-defined]
+    if not api_bp._got_registered_once:
         from app.api.config import config_bp
         from app.api.restart import restart_bp
 
@@ -63,24 +64,24 @@ def register_error_handlers(app: Flask) -> None:
     from app.utils import get_current_correlation_id
 
     @app.errorhandler(TabNotRestartable)
-    def handle_tab_not_restartable(exc: TabNotRestartable):
+    def handle_tab_not_restartable(exc: TabNotRestartable) -> tuple[Response, int]:
         return jsonify({"error": str(exc), "correlationId": get_current_correlation_id()}), 400
 
     @app.errorhandler(TabLookupError)
-    def handle_tab_lookup_error(exc: TabLookupError):
+    def handle_tab_lookup_error(exc: TabLookupError) -> tuple[Response, int]:
         return jsonify({"error": str(exc), "correlationId": get_current_correlation_id()}), 404
 
     @app.errorhandler(RestartInProgress)
-    def handle_restart_in_progress(exc: RestartInProgress):
+    def handle_restart_in_progress(exc: RestartInProgress) -> tuple[Response, int]:
         return jsonify({"error": str(exc), "correlationId": get_current_correlation_id()}), 409
 
     @app.errorhandler(RestartError)
-    def handle_restart_error(exc: RestartError):
+    def handle_restart_error(exc: RestartError) -> tuple[Response, int]:
         logger.exception("Restart error: %s", exc)
         return jsonify({"error": str(exc), "correlationId": get_current_correlation_id()}), 500
 
     @app.errorhandler(ConfigError)
-    def handle_config_error(exc: ConfigError):
+    def handle_config_error(exc: ConfigError) -> tuple[Response, int]:
         logger.exception("Configuration error: %s", exc)
         return jsonify({"error": str(exc), "correlationId": get_current_correlation_id()}), 500
 

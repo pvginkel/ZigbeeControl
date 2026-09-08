@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from dependency_injector.wiring import Provide, inject
 from flask import Blueprint
 from spectree import Response
@@ -19,5 +21,5 @@ config_bp = Blueprint("config", __name__)
 @inject
 def get_config(
     config_service: ConfigService = Provide[ServiceContainer.config_service],
-) -> dict:
+) -> dict[str, Any]:
     return config_service.to_response().model_dump()

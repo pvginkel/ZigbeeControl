@@ -2,6 +2,7 @@
 
 import logging
 import sys
+from typing import Any
 
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -105,7 +106,7 @@ def create_app(settings: "Settings | None" = None, app_settings: "AppSettings | 
     # Register SSE Gateway readiness check with HealthService
     import requests as _requests_module
 
-    def _check_sse_gateway_readiness() -> dict:
+    def _check_sse_gateway_readiness() -> dict[str, Any]:
         try:
             resp = _requests_module.get(
                 f"{settings.sse_gateway_url}/readyz", timeout=2.0
@@ -177,7 +178,10 @@ def create_app(settings: "Settings | None" = None, app_settings: "AppSettings | 
         # for STARTUP notifications will be invoked here.
         container.lifecycle_coordinator().fire_startup()
 
-    app.wsgi_app = ProxyFix(
+    # Flask declares wsgi_app as a method while documenting reassignment as the
+    # supported way to wrap WSGI middleware, so mypy's method-assign rule is
+    # wrong here; redeclaring it on App as an attribute is rejected too.
+    app.wsgi_app = ProxyFix(  # type: ignore[method-assign]
         app.wsgi_app,
         x_proto=1,
         x_host=1,
