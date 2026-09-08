@@ -23,12 +23,11 @@ dependencies all three services need (the SSE gateway on :3202 runs the
 
 import io
 import os
+import pty
 import re
 import signal
 import sys
 from pathlib import Path
-
-import pty
 
 ROOT = Path(__file__).resolve().parent.parent
 LOGS = ROOT / "logs"

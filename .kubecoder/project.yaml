@@ -20,10 +20,8 @@ projects:
     jenkins: ZigbeeControl/ZigbeeControl
     setup: cexec modern-app poetry install --no-interaction
     # No test: the root project is honcho plus the suite runner and ships no suite.
-    # No lint: tools/ and scripts/ have never been linted (CI does not lint them
-    # either) and the toolchain's Ruff carries a very broad default rule set, so
-    # wiring one here would hand the workflow a red, image-version-dependent gate.
-    # See ONBOARDING-STATE.md — this is an open operator decision.
+    # The root's own Python, pinned in pyproject.toml; the components lint themselves.
+    lint: cexec modern-app poetry run ruff check scripts tools
 
   backend:
     description: >-

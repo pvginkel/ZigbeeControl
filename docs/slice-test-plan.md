@@ -31,7 +31,7 @@ repo root; the CLI is cwd-bound.
 ```bash
 kc project build      # frontend only: generate:api + tsr generate + pnpm check + vite build + verify
 kc project test       # backend pytest, frontend Playwright E2E
-kc project lint       # backend ruff + mypy + vulture, frontend eslint + tsc + knip
+kc project lint       # root ruff; backend ruff + mypy + vulture; frontend eslint + tsc + knip
 ```
 
 `build` and `test` must be green. `kc project build` is also what preflight demands, so a red build
@@ -40,11 +40,9 @@ here means the slice never should have reached this phase.
 **`kc project lint` must be green** — every component, every statement. No gate in this repo is
 known red, so a lint failure here is this slice's and blocks. Trello #864, the backend's 36
 pre-existing mypy errors, is paid off: the strict profile `backend/pyproject.toml` declares is met
-in full, and the backend's own `cexec modern-app poetry run check` is green with it.
-
-One gate is genuinely absent: **`root` declares no `lint:`**. `tools/` and `scripts/` have never
-been linted, here or in CI. `ruff check --isolated` there reports 14 findings, including a real
-`F821 Undefined name 'io'` at `scripts/dev.py:41` and `:45`. Open with the operator; no card.
+in full, and the backend's own `cexec modern-app poetry run check` is green with it. Trello #904
+closed the other hole: `root` now lints `scripts/` and `tools/` with `ruff`, on the rule set the
+root `pyproject.toml` pins so the gate does not float with the toolchain image.
 
 ## 2. The live check
 

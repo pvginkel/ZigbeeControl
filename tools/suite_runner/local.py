@@ -27,12 +27,6 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from . import ALL_SUITES, REPO_ROOT, RESULTS_FILE
-
-# The backend requires Python 3.13 (backend/pyproject.toml pins ^3.13). Pin its
-# Poetry venv to python3.13 when that interpreter is on PATH; in CI the base
-# image's default python is already 3.13 (the binary may be absent by that
-# name), so we skip it.
-HAS_PYTHON313 = shutil.which("python3.13") is not None
 from .display import (
     is_full_mode,
     progress_end,
@@ -42,6 +36,12 @@ from .display import (
     set_full_mode,
 )
 from .process import run, run_streamed, run_tracked
+
+# The backend requires Python 3.13 (backend/pyproject.toml pins ^3.13). Pin its
+# Poetry venv to python3.13 when that interpreter is on PATH; in CI the base
+# image's default python is already 3.13 (the binary may be absent by that
+# name), so we skip it.
+HAS_PYTHON313 = shutil.which("python3.13") is not None
 
 
 # ---------------------------------------------------------------------------
@@ -345,7 +345,7 @@ def format_summary(all_results):
                     lines.append(f"  {step}: FAILED (see test_results.md)")
         else:
             mem_parts = []
-            for step, ok, detail, peak_mb in steps:
+            for step, _ok, _detail, peak_mb in steps:
                 mem = _format_mem(peak_mb)
                 mem_parts.append(f"{step}{mem}")
             lines.append(f"\n{app_name}: all passed ({', '.join(mem_parts)})")

@@ -31,7 +31,8 @@ neither poetry nor pnpm. Run every `kc project` verb from the repo root — the 
 kc project setup                 # poetry + pnpm install, Playwright chromium, seeds both .env files
 kc project build                 # frontend build (the only component that builds)
 kc project test                  # backend pytest + frontend Playwright
-kc project lint                  # backend ruff + mypy + vulture, frontend eslint + tsc + knip
+kc project lint                  # root ruff; backend ruff + mypy + vulture; frontend eslint +
+                                 # tsc + knip
 scripts/dev.py                   # the dev stack: frontend :3200, backend :3201, SSE gateway :3202
 ```
 
@@ -61,7 +62,8 @@ secrets, internal hostnames or non-public names in the tree.
 - `.kubecoder/config.yaml` and `.kubecoder/project.yaml` — the environment and the curated
   automation, both commented in place.
 
-## One thing that is knowingly red
+## No gate is knowingly red
 
-- **`root` has no `lint:`** — `tools/` and `scripts/` have never been linted, here or in CI. One
-  real finding among them: a missing `import io` at `scripts/dev.py:41` and `:45`.
+Every statement of `kc project lint`, `build` and `test` is green in every component. There is no
+standing exception to work around and none to inherit: a failure in any of them belongs to the
+change in front of you.
