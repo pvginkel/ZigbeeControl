@@ -38,8 +38,6 @@ component's code moved.
 They are a record of what was built, not a live surface: **do not update them**. Slices are recorded
 in `../ZigbeeControlSpecs`, which is a separate git repo — commit there separately.
 
-`docs/commands/*.md` under each subproject are likewise leftovers of the retired workflow. Nothing
-reads them. Leave them alone; they are the operator's to dispose of.
 
 ### 3. The reader-facing files in each subproject
 
