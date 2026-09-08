@@ -44,9 +44,7 @@ reads them. Leave them alone; they are the operator's to dispose of.
 ### 3. The reader-facing files in each subproject
 
 - **`backend/README.md`** — how to run the service and what its HTTP API is. Owed an update when
-  either changed. Be aware its **API section is stale**: it still documents the shared-secret
-  `APP_AUTH_TOKEN` / `APP_AUTH_COOKIE_NAME` auth the backend replaced with OIDC. If your slice
-  touched auth, fix the prose it touched rather than matching it.
+  either changed.
 - **`frontend/README.md`** — still the stock Vite template. If a slice gives it a reason to become a
   real README, write one; do not rewrite it just because it is generic.
 - **`backend/AGENTS.md` / `frontend/AGENTS.md`** — the per-subproject orientation an agent reads

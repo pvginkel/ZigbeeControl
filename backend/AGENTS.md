@@ -4,8 +4,8 @@ This document distills the current product brief so agents and contributors stay
 
 ## Purpose & Audience
 - **Goal:** Deliver a lightweight web UI that wraps three existing services (two Zigbee2MQTT dashboards and a code-server instance) inside persistent IFRAME tabs.
-- **Users:** Single-operator, LAN-only usage. Authentication is a shared secret that issues an HttpOnly cookie; no multi-tenant requirements.
-- **Scope:** Tabbed interface, optional restart controls for Kubernetes-backed tabs, live status via Server-Sent Events (SSE), and lightweight shared-secret cookie authentication. Nothing beyond those concerns.
+- **Users:** Single-operator, LAN-only usage. Authentication is OIDC (authorization code with PKCE) against the homelab Keycloak, with this backend as the confidential client holding the tokens in HttpOnly cookies; no multi-tenant requirements.
+- **Scope:** Tabbed interface, optional restart controls for Kubernetes-backed tabs, live status via Server-Sent Events (SSE), and OIDC cookie authentication that development switches off with `OIDC_ENABLED=false`. Nothing beyond those concerns.
 
 ## Architecture Overview
 - **Frontend:** React 19 + TypeScript + Vite. Tabs as internal state (no router). Zustand or reducer-based state is acceptable. Use TanStack Query for the restart mutation and any light caching.

@@ -25,24 +25,46 @@ In production mode (`FLASK_ENV=production`) the service is served by Waitress; d
 
 All endpoints are served under `/api` and return JSON unless noted otherwise.
 
-### POST `/api/auth/login`
-- **Description:** Exchanges a shared secret token for a long-lived (≈10 year) signed authentication cookie (HttpOnly, `SameSite=None`, `Partitioned`; `Secure` is added automatically when `FLASK_ENV=production`).
-- **Request body:**
-  ```json
-  {"token": "<APP_AUTH_TOKEN>"}
-  ```
+Authentication is OIDC, authorization code with PKCE, with this backend as the confidential client.
+When `OIDC_ENABLED=true`, every endpoint below other than the `/api/auth/*` flow itself requires the
+session cookie named by `OIDC_COOKIE_NAME` (default `access_token`), which `/api/auth/callback` sets.
+Development turns it off with `OIDC_ENABLED=false` — the default when the variable is unset: no
+cookie is then required and `/api/auth/self` answers with a synthetic `local-user`.
+
+### GET `/api/auth/login`
+- **Description:** Starts the OIDC flow. Takes a required `redirect` query parameter — where to land after login — validated against `BASEURL` to prevent open redirects. The PKCE verifier, nonce and redirect target are encrypted into the OAuth `state` parameter rather than held in a cookie, so the flow also works when the UI runs inside a cross-origin iframe.
+- **Status codes:**
+  - `302 Found` to the provider's authorization endpoint.
+  - `400 Bad Request` when `redirect` is missing or fails validation, or when `OIDC_ENABLED=false`.
+
+### GET `/api/auth/callback`
+- **Description:** The provider's redirect target. Decrypts `state`, exchanges `code` for tokens, validates the access token, then redirects to the `redirect` URL the login carried, with cookies set: `OIDC_COOKIE_NAME` (access token), `OIDC_REFRESH_COOKIE_NAME` (refresh token, when the provider issues one) and `id_token` (kept for logout). Cookie flags come from the `OIDC_COOKIE_*` group; `Secure` is inferred from `BASEURL` when `OIDC_COOKIE_SECURE` is left unset.
+- **Status codes:**
+  - `302 Found` to the original redirect URL.
+  - `400 Bad Request` for a missing or undecryptable `code`/`state`, or when `OIDC_ENABLED=false`.
+  - `401 Unauthorized` when the token exchange or token validation fails.
+
+### GET `/api/auth/logout`
+- **Description:** Clears the three auth cookies and, when `OIDC_ENABLED=true`, redirects to the provider's `end_session_endpoint` with `id_token_hint` so the session ends at the IdP too; with OIDC off, or when the provider advertises no end-session endpoint, it redirects straight to `redirect`. Takes an optional `redirect` query parameter (default `/`), validated against `BASEURL`.
+- **Status codes:** `302 Found`.
+
+### GET `/api/auth/self`
+- **Description:** Reports the current user. This one endpoint is public in the routing sense — it authenticates the caller itself — so an unauthenticated request gets a status rather than a redirect. With `OIDC_ENABLED=false` it returns a `local-user` holding `admin` and everything that role expands to.
 - **Response:**
   ```json
-  {"authenticated": true, "disabled": false}
+  {
+    "subject": "3f9a…",
+    "email": "someone@example.com",
+    "name": "Someone",
+    "roles": ["admin", "editor", "reader"]
+  }
   ```
-  Includes `Set-Cookie` headers for the auth cookie. Returns `403 Forbidden` when the token does not match `APP_AUTH_TOKEN`.
-  The JWT payload intentionally omits an expiry claim; the cookie remains valid until you revoke it (e.g. by rotating the shared secret).
-
-### GET `/api/auth/check`
-- **Description:** Probe endpoint used by NGINX `auth_request` or health checks. Returns `200 OK` when the authentication cookie is valid, `403 Forbidden` otherwise. When `APP_AUTH_DISABLED=1`, always returns success with `{ "disabled": true }`.
+- **Status codes:**
+  - `200 OK` with the user's identity and expanded roles.
+  - `401 Unauthorized` when no valid token is presented.
+  - `403 Forbidden` when the token is valid but carries no recognised role.
 
 ### GET `/api/config`
-- **Auth:** Requires a valid authentication cookie.
 - **Description:** Fetches the tab configuration that the frontend should render.
 - **Response:**
   ```json
@@ -60,7 +82,7 @@ All endpoints are served under `/api` and return JSON unless noted otherwise.
 - **Status codes:** `200 OK` on success.
 
 ### POST `/api/restart/<idx>`
-- **Auth:** Requires a valid authentication cookie and a restartable tab.
+- **Auth:** The tab must be restartable.
 - **Description:** Triggers an optimistic restart for the tab at index `<idx>` when it has Kubernetes metadata.
 - **Response:**
   ```json
@@ -77,7 +99,6 @@ All endpoints are served under `/api` and return JSON unless noted otherwise.
   - `500 Internal Server Error` for unexpected Kubernetes or configuration issues.
 
 ### GET `/api/status/<idx>/stream`
-- **Auth:** Requires a valid authentication cookie.
 - **Description:** Server-Sent Events stream that emits status updates for tab `<idx>`, interleaved with lightweight `event: heartbeat` frames when no state changes occur.
 - **Usage:** Subscribe via an `EventSource` in the browser or any SSE-capable client. Example event payload:
   ```text
@@ -87,4 +108,4 @@ All endpoints are served under `/api` and return JSON unless noted otherwise.
 
   ```
 - **Initial behaviour:** The latest known state (`running`, `restarting`, or `error`) is sent immediately upon connection.
-- **Heartbeat:** The backend sends `event: heartbeat` frames every `APP_SSE_HEARTBEAT_SECONDS` (default 5/30 seconds) so intermediaries such as Waitress can notice disconnected clients.
+- **Heartbeat:** The backend sends `event: heartbeat` frames every `SSE_HEARTBEAT_INTERVAL` seconds (5 in development, forced to 30 in production) so intermediaries such as Waitress can notice disconnected clients.
