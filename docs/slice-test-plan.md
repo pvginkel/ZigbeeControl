@@ -38,11 +38,11 @@ kc project lint       # root ruff; backend ruff + mypy + vulture; frontend eslin
 here means the slice never should have reached this phase.
 
 **`kc project lint` must be green** — every component, every statement. No gate in this repo is
-known red, so a lint failure here is this slice's and blocks. Trello #864, the backend's 36
-pre-existing mypy errors, is paid off: the strict profile `backend/pyproject.toml` declares is met
-in full, and the backend's own `cexec modern-app poetry run check` is green with it. Trello #904
-closed the other hole: `root` now lints `scripts/` and `tools/` with `ruff`, on the rule set the
-root `pyproject.toml` pins so the gate does not float with the toolchain image.
+known red, so a lint failure here is this slice's and blocks. The backend's 36 pre-existing mypy
+errors are paid off: the strict profile `backend/pyproject.toml` declares is met in full, and the
+backend's own `cexec modern-app poetry run check` is green with it. `root` lints `scripts/` and
+`tools/` with `ruff`, on the rule set the root `pyproject.toml` pins so the gate does not float
+with the toolchain image.
 
 ## 2. The live check
 
