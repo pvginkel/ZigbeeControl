@@ -5,7 +5,9 @@ import { cn } from '@/lib/utils'
 
 type DialogRootProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>
 type DialogOverlayProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
-export type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+export type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+  'data-testid'?: string
+}
 type DialogPortalProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Portal>
 
 /**

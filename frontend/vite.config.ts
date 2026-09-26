@@ -107,7 +107,7 @@ export default defineConfig({
         secure: false,
       }
     },
-    watch: process.env.VITE_TEST_MODE === 'true' ? { ignored: ['**'] } : undefined
+    watch: process.env.VITE_TEST_MODE === 'true' ? { ignored: ['**'] } : { ignored: ['**/.pnpm-store/**'] }
   },
   preview: {
     proxy: {
