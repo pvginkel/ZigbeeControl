@@ -3,16 +3,15 @@
 set -euo pipefail
 
 # Run the testing server directly (no daemonization)
-# This script is used by both testing-daemon-ctl.sh and can be run directly
+# Playwright starts one per worker; it can also be run directly.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo $BACKEND_DIR
 
-# Default listen port when --port is not given. Was inherited from scripts/args.sh,
-# which went with the docker-run wrappers it existed for; the Playwright harness
-# (frontend/tests/support/process/servers.ts) always passes --port explicitly.
+# Port the testing server falls back to when --port is not given. Playwright
+# always passes an explicit per-worker port; this only covers manual runs.
 TESTING_BACKEND_PORT=3211
 
 # Change to backend directory

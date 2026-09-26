@@ -1,4 +1,4 @@
-"""Testing service for test authentication sessions."""
+"""Testing service for test utilities like auth sessions."""
 
 import logging
 import secrets
@@ -18,7 +18,7 @@ class TestSession:
 
 
 class TestingService:
-    """Service for the test authentication sessions the E2E suite drives.
+    """Service for testing utilities like auth sessions.
 
     Test session state is stored at the class level so it persists across
     Factory-created instances within the same process.

@@ -178,9 +178,8 @@ def create_app(settings: "Settings | None" = None, app_settings: "AppSettings | 
         # for STARTUP notifications will be invoked here.
         container.lifecycle_coordinator().fire_startup()
 
-    # Flask declares wsgi_app as a method while documenting reassignment as the
-    # supported way to wrap WSGI middleware, so mypy's method-assign rule is
-    # wrong here; redeclaring it on App as an attribute is rejected too.
+    # Flask documents replacing wsgi_app with middleware, but declares it as a
+    # method, so mypy reads the assignment as clobbering one.
     app.wsgi_app = ProxyFix(  # type: ignore[method-assign]
         app.wsgi_app,
         x_proto=1,
