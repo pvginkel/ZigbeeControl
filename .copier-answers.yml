@@ -1,0 +1,21 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.1.0
+_src_path: ../ModernAppTemplate
+author_email: pvginkel@gmail.com
+author_name: Pieter van Ginkel
+backend_image: zigbee-control
+backend_image_pin_key: zigbeeControl
+backend_port: 3201
+deploy_repo: pvginkel/Zigbee2mqttDeploy
+frontend_image: zigbee-control-ui
+frontend_image_pin_key: zigbeeControlUI
+frontend_port: 3200
+github_owner: pvginkel
+project_description: Control panel wrapping Zigbee2MQTT instances in persistent iframe
+    tabs
+project_name: zigbee-control
+repo_name: ZigbeeControl
+sse_gateway_port: 3202
+use_database: false
+use_s3: false
+use_sse: true

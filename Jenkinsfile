@@ -172,7 +172,7 @@ podTemplate(inheritFrom: 'jenkins-agent kaniko', containers: [
             }
         }
 
-        stage('Building zigbee-control-frontend') {
+        stage('Building zigbee-control-ui') {
             writeFile file: 'frontend/git-rev', text: gitRev
 
             container('kaniko') {
