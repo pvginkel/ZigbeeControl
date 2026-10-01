@@ -1,39 +1,59 @@
-// Architecture producer pipeline for the federated Architecture-as-Code model.
-// One job, one producer (`zigbee-control`) covering the whole monorepo — both
-// artifacts below declare it, so they collect into the same producer directory:
-//   - backend/  — hand-authored: backend/docs/architecture/*.yaml (validation only).
-//   - frontend/ — hand-authored: frontend/docs/architecture/*.yaml (validation only).
-// Nothing is generated here, so the job needs no Vault credentials — only
-// outbound HTTPS to architecture.webathome.org for validation.
+// Validates ZigbeeControl's hand-authored architecture models, backend/docs/architecture/*.yaml and
+// frontend/docs/architecture/*.yaml, against the architecture service, and archives them as the
+// producer's artifact, which AaC/Architecture collects.
+//
+// The monorepo is one producer, zigbee-control: both models declare it, and AaC/Architecture
+// collects them together as that producer's artifact.
+//
+// Controller config:
+//   - Job: AaC/ZigbeeControl
+//   - SCM: pvginkel/ZigbeeControl, branch main
+//   - Script Path: Jenkinsfile.architecture
 
 library identifier: 'JenkinsPipelineUtils', changelog: false
 
-podTemplate(inheritFrom: 'jenkins-agent', containers: [
-    containerTemplates.aac_tools('aac-tools')
-]) {
-    node(POD_LABEL) {
-        stage('Cloning repo') {
-            checkout scm
+pipeline {
+    agent {
+        kubernetes {
+            inheritFrom 'jenkins-agent'
+            yaml podYaml(templates: ['aac-tools'])
+        }
+    }
+
+    options {
+        disableConcurrentBuilds(abortPrevious: true)
+        skipDefaultCheckout()
+        timeout(time: 60, unit: 'MINUTES')
+        timestamps()
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
         }
 
-        // dir() only moves the cwd for `sh` steps — archiveArtifacts globs always
-        // resolve workspace-root-relative, so they stay at the top level, prefixed.
-        stage('Validate backend architecture') {
-            dir('backend') {
-                container('aac-tools') {
-                    sh 'arch-validate docs/architecture/*.yaml'
+        stage('Validate architecture (backend)') {
+            steps {
+                script {
+                    architectureProducer.validate(files: ['backend/docs/architecture/*.yaml'])
+                    architectureProducer.archive(files: ['backend/docs/architecture/*.yaml'])
                 }
             }
-            archiveArtifacts artifacts: 'backend/docs/architecture/*.yaml', fingerprint: true
         }
 
-        stage('Validate frontend architecture') {
-            dir('frontend') {
-                container('aac-tools') {
-                    sh 'arch-validate docs/architecture/*.yaml'
+        stage('Validate architecture (frontend)') {
+            steps {
+                script {
+                    architectureProducer.validate(files: ['frontend/docs/architecture/*.yaml'])
+                    architectureProducer.archive(files: ['frontend/docs/architecture/*.yaml'])
                 }
             }
-            archiveArtifacts artifacts: 'frontend/docs/architecture/*.yaml', fingerprint: true
         }
     }
 }
