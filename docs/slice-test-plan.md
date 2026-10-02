@@ -12,8 +12,8 @@ instance. It runs the suites tree-wide and boots the dev stack in this environme
 working tree.
 
 **The push at the end deploys to production.** `Jenkinsfile` builds both images with kaniko
-(`zigbee-control`, `zigbee-control-ui`) and its final stage is `cicd.helmDeploy()`. There is no
-DTAP: the only environment this repo has is the live one. That is the repo's standing behaviour, not
+(`zigbee-control`, `zigbee-control-ui`) and its final stage is `cicd.writeVersionPins(...)`, which pins both tags into Zigbee2mqttDeploy
+for Argo CD to sync to prd. There is no DTAP: the only environment this repo has is the live one. That is the repo's standing behaviour, not
 something this phase controls, and it is the whole reason for the ordering below — **everything is
 verified before the push, because after the push it is live.**
 
@@ -139,8 +139,8 @@ operator — it does not claim the build passed.
 
 This is a **did-I-break-CI check, not a verification gate** — the slice was already proven in steps
 1–2. What it catches is the class of failure only CI can see: both Dockerfiles building end to end,
-and the Helm deploy landing. Jenkins runs the same two suites this phase already ran, through
-`poetry run run-suite`, so a suite failure there means something environment-shaped, not a new bug.
+and the image pins landing in Zigbee2mqttDeploy. Jenkins runs the same two suites this phase
+already ran, through `poetry run run-suite`, so a suite failure there means something environment-shaped, not a new bug.
 A red build is a blocking finding even though every local check passed — and because the deploy
 stage is last, a red build usually means production is still on the previous image.
 
