@@ -119,7 +119,7 @@ do not reach it with anything from steps 1–3 unresolved.
 Record the build number *before* pushing, so you can tell the new build from the old one:
 
 ```
-mcp__jenkins__getJob  jobFullName="ZigbeeControl/ZigbeeControl"
+mcp__jenkins__getJob  jobFullName="ZigbeeControl"
                       tree="lastBuild[number,result,building]"
 ```
 
@@ -132,7 +132,7 @@ in-flight build when a newer push arrives, and `#<n>` is the build that replaced
 instead — the verdict on your commit is whichever build actually ran to completion over it.
 
 **The MCP tools are the only way to read this from a session.** Jenkins' own JSON API
-(`.../job/ZigbeeControl/job/ZigbeeControl/api/json`) answers `403` to an unauthenticated request and
+(`.../job/ZigbeeControl/api/json`) answers `403` to an unauthenticated request and
 this environment carries no Jenkins credentials, so there is no `curl` fallback. A session without
 those tools reports the pushed commit and the build it expects, and leaves the result to the
 operator — it does not claim the build passed.

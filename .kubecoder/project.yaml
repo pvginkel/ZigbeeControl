@@ -17,7 +17,7 @@ projects:
       `poetry run run-suite`), the shared Procfile.dev dev stack, and CI.
     # The build/validation/deploy job. `AaC/ZigbeeControl` (Jenkinsfile.architecture)
     # is the repo's second job and validates the docs/architecture/*.yaml producers.
-    jenkins: ZigbeeControl/ZigbeeControl
+    jenkins: ZigbeeControl
     setup: cexec modern-app poetry install --no-interaction
     # No test: the root project is honcho plus the suite runner and ships no suite.
     # The root's own Python, pinned in pyproject.toml; the components lint themselves.

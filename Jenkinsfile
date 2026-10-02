@@ -5,7 +5,7 @@
 // there is no promote stage.
 //
 // Controller config:
-//   - Job: ZigbeeControl/ZigbeeControl
+//   - Job: ZigbeeControl
 //   - SCM: pvginkel/ZigbeeControl, branch main
 //   - Script Path: Jenkinsfile
 
