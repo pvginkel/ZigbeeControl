@@ -15,7 +15,7 @@ capabilities:
   # Playwright suite never clicks restart — so every gate is green without one, and
   # so is the dev stack (tab status starts at `running` and only moves on a
   # restart). Clicking Restart for real needs patch/get/list/watch on
-  # apps/v1 deployments in the `zigbee2mqtt` namespace, which the mounted
+  # apps/v1 deployments in the `zigbee2mqtt-prd` namespace, which the mounted
   # read-only ~/.kube/config does not carry. Open operator question — see
   # ONBOARDING-STATE.md.
 
@@ -24,6 +24,10 @@ repos:
   # environment of it. /dev:onboard scaffolds its contents in a later run.
   - url: https://github.com/pvginkel/ZigbeeControlSpecs
     shared: true
+  # The deploy repo: the Helm chart Argo CD syncs this app from, including the
+  # production tabs.yaml. CI pins image tags in it, and the deployment tracker
+  # follows a build through it.
+  - url: https://github.com/pvginkel/Zigbee2mqttDeploy.git
 
 # One merged sidecar rather than `python` + `frontend`: the Playwright harness
 # boots the Flask backend per worker (frontend/tests/support/process/servers.ts),

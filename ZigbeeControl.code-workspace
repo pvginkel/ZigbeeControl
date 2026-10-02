@@ -5,6 +5,9 @@
     },
     {
       "path": "../ZigbeeControlSpecs"
+    },
+    {
+      "path": "../Zigbee2mqttDeploy"
     }
   ],
   "tasks": {

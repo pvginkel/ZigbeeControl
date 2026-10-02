@@ -106,7 +106,7 @@ this doc and is missing from it.
 
 The one thing this environment cannot exercise is a **real** Kubernetes rollout restart: pytest
 injects a fake `AppsV1Api`, the E2E suite never clicks Restart, and the mounted kubeconfig carries no
-write access to the `zigbee2mqtt` namespace. A slice whose criteria depend on a live restart reports
+write access to the `zigbee2mqtt-prd` namespace. A slice whose criteria depend on a live restart reports
 those as *not verified*, and says so.
 
 ## 4. Push, then follow the build
