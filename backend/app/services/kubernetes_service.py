@@ -169,7 +169,7 @@ class KubernetesService:
         )
 
         try:
-            self._apps_api.patch_namespaced_deployment(
+            deployment_obj = self._apps_api.patch_namespaced_deployment(
                 name=deployment,
                 namespace=namespace,
                 body=body,
@@ -193,34 +193,6 @@ class KubernetesService:
             )
             raise RestartFailed(
                 f"unexpected error triggering restart: {exc}",
-                namespace=namespace,
-                deployment=deployment,
-            ) from exc
-
-        try:
-            deployment_obj = self._apps_api.read_namespaced_deployment_status(
-                name=deployment,
-                namespace=namespace,
-            )
-        except ApiException as exc:
-            logger.exception(
-                "Unable to read deployment status %s/%s after restart trigger",
-                namespace,
-                deployment,
-            )
-            raise RestartFailed(
-                f"failed to read deployment status: {getattr(exc, 'reason', exc.status)}",
-                namespace=namespace,
-                deployment=deployment,
-            ) from exc
-        except Exception as exc:
-            logger.exception(
-                "Unexpected error reading deployment status for %s/%s",
-                namespace,
-                deployment,
-            )
-            raise RestartFailed(
-                f"unexpected error reading deployment status: {exc}",
                 namespace=namespace,
                 deployment=deployment,
             ) from exc

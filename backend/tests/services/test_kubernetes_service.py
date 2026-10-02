@@ -52,19 +52,15 @@ class _FakeCondition:
 
 
 class _FakeAppsApi:
-    def __init__(self, stream_events, status_obj=None):
+    def __init__(self, stream_events, patched_obj=None):
         self.stream_events = stream_events
         self.patched = []
         self.list_calls = []
-        self.status_obj = status_obj
+        self.patched_obj = patched_obj
 
     def patch_namespaced_deployment(self, name: str, namespace: str, body):
         self.patched.append((name, namespace, body))
-
-    def read_namespaced_deployment_status(self, name: str, namespace: str):
-        if self.status_obj is not None:
-            return self.status_obj
-        return self.stream_events[-1]["object"] if self.stream_events else None
+        return self.patched_obj
 
     def list_namespaced_deployment(self, namespace: str, field_selector: str | None = None, **kwargs):
         self.list_calls.append(
@@ -211,7 +207,7 @@ def test_restart_success_sets_running():
     ]
     apps_api = _FakeAppsApi(
         events,
-        status_obj=_FakeDeployment(
+        patched_obj=_FakeDeployment(
             metadata=_FakeMetadata(generation=target_generation),
             status=status_before,
             spec=_FakeSpec(replicas=1),
@@ -241,7 +237,7 @@ def test_restart_timeout_emits_error():
     events: list[dict] = []
     apps_api = _FakeAppsApi(
         events,
-        status_obj=_FakeDeployment(
+        patched_obj=_FakeDeployment(
             metadata=_FakeMetadata(generation=1),
             status=_FakeStatus(observed_generation=0),
             spec=_FakeSpec(replicas=1),
