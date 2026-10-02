@@ -7,7 +7,7 @@
 # (tools/suite_runner) — so the prefixes are safe here.
 #
 # Neither Dockerfile is wired into `build:`. Both images are CI's
-# (helmCharts.kaniko in the Jenkinsfile) and this environment has no image builder,
+# (helmCharts.kaniko2 in the Jenkinsfile) and this environment has no image builder,
 # so there is nothing to build locally.
 
 projects:
