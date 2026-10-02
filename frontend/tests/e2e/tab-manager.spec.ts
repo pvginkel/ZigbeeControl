@@ -1,4 +1,5 @@
 import { test, expect } from '../support/fixtures'
+import { expectConsoleError } from '../support/helpers'
 
 test.describe('Tab Manager', () => {
   test.beforeEach(async ({ auth, page }) => {
@@ -129,5 +130,55 @@ test.describe('Tab Manager - Unauthenticated', () => {
     // The auth gate should redirect to login or show auth error
     // The exact behavior depends on the template's auth gate implementation
     expect(response).toBeTruthy()
+  })
+})
+
+test.describe('Tab reload after restart', () => {
+  test('waits for the tab to answer before reloading its iframe', async ({ auth, page, backendUrl, tabManager }) => {
+    // Stand in for the Zigbee2MQTT upstream: it answers 502 while `upstreamReady` is false, the way the
+    // production proxy does in the moment between the pod turning Ready and its Service routing to it.
+    let upstreamReady = true
+    const documentStatuses: number[] = []
+    /* eslint-disable testing/no-route-mocks -- /z2m1/ is the Zigbee2MQTT upstream behind the production proxy, not this backend; nothing serves it under test */
+    await page.route('**/z2m1/**', (route) => {
+      const status = upstreamReady ? 200 : 502
+      if (route.request().resourceType() === 'document') documentStatuses.push(status)
+      return route.fulfill({
+        status,
+        contentType: 'text/html',
+        body: `<p data-testid="upstream">load ${documentStatuses.length} status ${status}</p>`,
+      })
+    })
+    /* eslint-enable testing/no-route-mocks */
+
+    await auth.createSession({ name: 'Test User', email: 'test@example.com', roles: ['editor'] })
+    await page.goto('/')
+    await tabManager.expectLoaded()
+    // The browser logs each 502 probe of the not-yet-routable upstream as a failed resource load.
+    await expectConsoleError(page, /502 \(Bad Gateway\)/)
+    const upstream = page.frameLocator('[data-testid="tab.iframe.0"]').getByTestId('upstream')
+    await expect(upstream).toHaveText('load 1 status 200')
+
+    upstreamReady = false
+    const restarting = await page.request.post(`${backendUrl}/api/testing/tabs/0/status`, {
+      data: { state: 'restarting' },
+    })
+    expect(restarting.ok()).toBeTruthy()
+    await expect(page.getByTestId('tab.wrapper.0')).toHaveAttribute('data-status', 'restarting')
+
+    const probe = page.waitForResponse((response) => response.url().includes('/z2m1/') && response.status() === 502)
+    const running = await page.request.post(`${backendUrl}/api/testing/tabs/0/status`, {
+      data: { state: 'running' },
+    })
+    expect(running.ok()).toBeTruthy()
+    await expect(page.getByTestId('tab.wrapper.0')).toHaveAttribute('data-status', 'running')
+    await probe
+
+    // The upstream still answers 502, so the iframe has not been reloaded into it.
+    expect(documentStatuses).toEqual([200])
+
+    upstreamReady = true
+    await expect(upstream).toHaveText('load 2 status 200')
+    expect(documentStatuses).toEqual([200, 200])
   })
 })

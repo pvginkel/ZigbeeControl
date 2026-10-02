@@ -211,6 +211,41 @@
         "title": "StatusState",
         "type": "string"
       },
+      "StatusPayload.2b706d4": {
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional diagnostic message",
+            "title": "Message"
+          },
+          "state": {
+            "$ref": "#/components/schemas/StatusPayload.2b706d4.StatusState",
+            "description": "Current state of the tab"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "StatusPayload",
+        "type": "object"
+      },
+      "StatusPayload.2b706d4.StatusState": {
+        "enum": [
+          "running",
+          "restarting",
+          "error"
+        ],
+        "title": "StatusState",
+        "type": "string"
+      },
       "TaskEventRequestSchema.6b6ce9f": {
         "description": "Request schema for sending fake task events in testing mode.",
         "properties": {
@@ -577,6 +612,13 @@
         "title": "ValidationErrorElement",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -598,7 +640,7 @@
     },
     "/api/auth/login": {
       "get": {
-        "description": "Generates authorization URL and redirects to OIDC provider. Stores PKCE state in signed cookie.\n\nQuery Parameters:     redirect: URL to redirect to after successful login (required)\n\nReturns:     302: Redirect to OIDC provider authorization endpoint     400: Missing or invalid redirect parameter",
+        "description": "Generates authorization URL and redirects to OIDC provider. PKCE state is encrypted into the OAuth state parameter.\n\nQuery Parameters:     redirect: URL to redirect to after successful login (required)\n\nReturns:     302: Redirect to OIDC provider authorization endpoint     400: Missing or invalid redirect parameter",
         "operationId": "get__api_auth_login",
         "parameters": [],
         "responses": {},
@@ -618,7 +660,7 @@
     },
     "/api/auth/self": {
       "get": {
-        "description": "This endpoint is @public because it handles authentication explicitly: in testing mode it checks test sessions and forced errors; otherwise it validates tokens or returns a default local-user when OIDC is off.\n\nReturns:     200: User information from validated token or test session     401: No valid token provided or token invalid",
+        "description": "This endpoint is @public because it handles authentication explicitly: in testing mode it checks test sessions and forced errors; otherwise it validates tokens or returns a default local-user when OIDC is off.\n\nReturns:     200: User information from validated token or test session     401: No valid token provided or token invalid     403: User authenticated but has no recognized hierarchical role",
         "operationId": "get__api_auth_self",
         "parameters": [],
         "responses": {
@@ -716,8 +758,14 @@
             "description": "Bad Request"
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "summary": "restart_tab <POST>",
-        "tags": []
+        "tags": [],
+        "x-required-role": "editor"
       }
     },
     "/api/sse/callback": {
@@ -726,8 +774,14 @@
         "operationId": "post__api_sse_callback",
         "parameters": [],
         "responses": {},
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "summary": "Handle SSE Gateway connect/disconnect callbacks.",
-        "tags": []
+        "tags": [],
+        "x-required-role": "editor"
       }
     },
     "/api/tasks/{task_id}": {
@@ -746,8 +800,14 @@
           }
         ],
         "responses": {},
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "summary": "Remove a completed task from registry.",
-        "tags": []
+        "tags": [],
+        "x-required-role": "editor"
       }
     },
     "/api/tasks/{task_id}/cancel": {
@@ -766,8 +826,14 @@
           }
         ],
         "responses": {},
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "summary": "Cancel a running task.",
-        "tags": []
+        "tags": [],
+        "x-required-role": "editor"
       }
     },
     "/api/tasks/{task_id}/status": {
@@ -900,8 +966,14 @@
             "description": "Bad Request"
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "summary": "Trigger a version event for integration testing.",
-        "tags": []
+        "tags": [],
+        "x-required-role": "editor"
       }
     },
     "/api/testing/logs/stream": {
@@ -951,8 +1023,65 @@
             "description": "Bad Request"
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "summary": "Send a fake task event to a specific SSE connection for testing.",
-        "tags": []
+        "tags": [],
+        "x-required-role": "editor"
+      }
+    },
+    "/api/testing/tabs/{idx}/status": {
+      "post": {
+        "description": "",
+        "operationId": "post__api_testing_tabs_{idx}_status",
+        "parameters": [
+          {
+            "description": "",
+            "in": "path",
+            "name": "idx",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusPayload.2b706d4"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError.6a07bef"
+                }
+              }
+            },
+            "description": "Bad Request"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Broadcast a tab status event to every connected client.",
+        "tags": [],
+        "x-required-role": "editor"
       }
     },
     "/api/testing/tasks/start": {
@@ -992,8 +1121,14 @@
             "description": "Bad Request"
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "summary": "Start a demo or failing task for integration testing.",
-        "tags": []
+        "tags": [],
+        "x-required-role": "editor"
       }
     },
     "/health/drain": {
@@ -1121,5 +1256,10 @@
     }
   },
   "security": [],
-  "tags": []
+  "tags": [],
+  "x-auth-roles": {
+    "admin": null,
+    "read": null,
+    "write": "editor"
+  }
 }

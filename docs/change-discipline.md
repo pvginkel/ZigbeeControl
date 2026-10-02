@@ -72,7 +72,8 @@ not a substitute — the point of the test is that it runs again next time.
 The Playwright suite boots a real backend and a real SSE gateway per worker
 (`frontend/tests/support/process/servers.ts`), so a frontend change is proven against the actual
 API, not a mock. Kubernetes is the one thing that is faked: pytest injects a fake `AppsV1Api` and
-the E2E suite never clicks Restart. A change that genuinely cannot be covered by either suite is a
+the E2E suite never clicks Restart — it drives the UI's restart handling by pushing tab statuses
+through the testing-only `POST /api/testing/tabs/<idx>/status`. A change that genuinely cannot be covered by either suite is a
 change whose testability problem is the first thing to solve — say so and fix the seam, rather than
 shipping it uncovered.
 

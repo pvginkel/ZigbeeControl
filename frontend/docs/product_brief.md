@@ -72,7 +72,7 @@ tabs:
 
 1. **Open app →** FE runs `GET /api/auth/check`; when unauthorized it blocks on the password prompt until `POST /api/auth/login` succeeds, then loads the config and makes the first tab visible (IFRAME created). For tabs with `k8s`, FE opens an SSE stream for live status.
 2. **Switch tabs →** previously created IFRAMEs are **hidden, not unmounted**, and instantly shown again.
-3. **Restart (Z2M tabs) →** click icon → FE sends `POST /api/restart/:tabIndex` → icon switches to blinking **restarting** immediately → SSE later flips to **running** or **error**.
+3. **Restart (Z2M tabs) →** click icon → FE sends `POST /api/restart/:tabIndex` → icon switches to blinking **restarting** immediately → SSE later flips to **running** or **error**. When a restart ends, the IFRAME reloads once the tab's URL answers without a 5xx (the Service routes to the new pod a moment after it turns Ready), or after ~30s regardless.
 
 ## 8) Success criteria
 

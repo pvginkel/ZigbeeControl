@@ -45,9 +45,11 @@ def register_blueprints(api_bp: Blueprint, app: App) -> None:
     if not api_bp._got_registered_once:
         from app.api.config import config_bp
         from app.api.restart import restart_bp
+        from app.api.testing_tabs import testing_tabs_bp
 
         api_bp.register_blueprint(config_bp)
         api_bp.register_blueprint(restart_bp)
+        api_bp.register_blueprint(testing_tabs_bp)
 
     # Force TabStatusService singleton initialization so it registers the
     # on_connect callback with the SSE connection manager.
