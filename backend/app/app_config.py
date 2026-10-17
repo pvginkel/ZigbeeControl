@@ -9,6 +9,8 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.config import dump_config_for_logging
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -33,6 +35,10 @@ class AppSettings(BaseModel):
 
     tabs_config_path: str = ""
     k8s_restart_timeout: int = 180
+
+    def dump_for_logging(self) -> dict[str, str]:
+        """Every setting, for the boot log. None of them is a secret."""
+        return dump_config_for_logging(self)
 
     @classmethod
     def load(cls, env: "AppEnvironment | None" = None, flask_env: str = "development") -> "AppSettings":
