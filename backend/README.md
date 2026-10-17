@@ -32,20 +32,20 @@ Development turns it off with `OIDC_ENABLED=false` — the default when the vari
 cookie is then required and `/api/auth/self` answers with a synthetic `local-user`.
 
 ### GET `/api/auth/login`
-- **Description:** Starts the OIDC flow. Takes a required `redirect` query parameter — where to land after login — validated against `BASEURL` to prevent open redirects. The PKCE verifier, nonce and redirect target are encrypted into the OAuth `state` parameter rather than held in a cookie, so the flow also works when the UI runs inside a cross-origin iframe.
+- **Description:** Starts the OIDC flow. Takes a required `redirect` query parameter — where to land after login — which must be a path on this site (`/...`), to prevent open redirects. The provider redirects back to `/api/auth/callback` on the origin the login request came in on, so every hostname the UI is served on needs that callback registered as a valid redirect URI at the provider. The PKCE verifier, nonce and redirect target are encrypted into the OAuth `state` parameter rather than held in a cookie, so the flow also works when the UI runs inside a cross-origin iframe.
 - **Status codes:**
   - `302 Found` to the provider's authorization endpoint.
   - `400 Bad Request` when `redirect` is missing or fails validation, or when `OIDC_ENABLED=false`.
 
 ### GET `/api/auth/callback`
-- **Description:** The provider's redirect target. Decrypts `state`, exchanges `code` for tokens, validates the access token, then redirects to the `redirect` URL the login carried, with cookies set: `OIDC_COOKIE_NAME` (access token), `OIDC_REFRESH_COOKIE_NAME` (refresh token, when the provider issues one) and `id_token` (kept for logout). Cookie flags come from the `OIDC_COOKIE_*` group; `Secure` is inferred from `BASEURL` when `OIDC_COOKIE_SECURE` is left unset.
+- **Description:** The provider's redirect target. Decrypts `state`, exchanges `code` for tokens, validates the access token, then redirects to the `redirect` path the login carried, with cookies set: `OIDC_COOKIE_NAME` (access token), `OIDC_REFRESH_COOKIE_NAME` (refresh token, when the provider issues one) and `id_token` (kept for logout). Cookie flags come from the `OIDC_COOKIE_*` group; `Secure` is inferred from `BASEURL` when `OIDC_COOKIE_SECURE` is left unset.
 - **Status codes:**
-  - `302 Found` to the original redirect URL.
+  - `302 Found` to the original redirect path.
   - `400 Bad Request` for a missing or undecryptable `code`/`state`, or when `OIDC_ENABLED=false`.
   - `401 Unauthorized` when the token exchange or token validation fails.
 
 ### GET `/api/auth/logout`
-- **Description:** Clears the three auth cookies and, when `OIDC_ENABLED=true`, redirects to the provider's `end_session_endpoint` with `id_token_hint` so the session ends at the IdP too; with OIDC off, or when the provider advertises no end-session endpoint, it redirects straight to `redirect`. Takes an optional `redirect` query parameter (default `/`), validated against `BASEURL`.
+- **Description:** Clears the three auth cookies and, when `OIDC_ENABLED=true`, redirects to the provider's `end_session_endpoint` with `id_token_hint` so the session ends at the IdP too; with OIDC off, or when the provider advertises no end-session endpoint, it redirects straight to `redirect`. Takes an optional `redirect` query parameter (default `/`), which must be a path on this site; the post-logout redirect URI is that path on the origin the request came in on.
 - **Status codes:** `302 Found`.
 
 ### GET `/api/auth/self`
