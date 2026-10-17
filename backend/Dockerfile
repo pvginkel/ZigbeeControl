@@ -1,41 +1,23 @@
-FROM python:3.13-slim AS build
-
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VIRTUALENVS_IN_PROJECT=1
-ENV POETRY_VIRTUALENVS_CREATE=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# system deps only if you need to compile wheels; many projects don't
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      curl \
-      ca-certificates \
-      build-essential \
-      libffi-dev libssl-dev pkg-config \
-   && rm -rf /var/lib/apt/lists/*
-
-RUN pip install poetry
+# The build image (DockerImages, modern-app-backend-build) carries Python 3.13,
+# uv, the -dev packages wheels compile against, and uv's settings: the image's
+# own Python, never a downloaded one, and copy mode.
+FROM registry:5000/modern-app-backend-build AS build
 
 WORKDIR /app
 
 # --- Reproduce the environment ---
-COPY pyproject.toml poetry.lock /app/
+COPY pyproject.toml uv.lock /app/
 
 # Install project deps into .venv
-RUN poetry install --no-root --no-interaction --no-ansi
+RUN uv sync --locked --no-dev --no-install-project
 
 # copy your source (no re-resolution needed)
 COPY *.py /app/
 COPY app /app/app
 
-# Now let's build the runtime image from the builder.
-#   We'll just copy the env and the PATH reference.
-FROM python:3.13-slim
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends tini netcat-openbsd \
-   && rm -rf /var/lib/apt/lists/*
+# The runtime image (DockerImages, modern-app-backend) carries tini, netcat and
+# the shared libraries: libmagic, the image codecs and libpq.
+FROM registry:5000/modern-app-backend
 
 EXPOSE 3201
 
