@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class StatusState(str, Enum):
+class StatusState(StrEnum):
     RUNNING = "running"
     RESTARTING = "restarting"
     ERROR = "error"
