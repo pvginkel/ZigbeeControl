@@ -10,6 +10,3 @@ frame  # unused variable
 exc_type  # unused variable
 exc_val  # unused variable
 exc_tb  # unused variable
-
-# OidcClientService convenience method (public API, used by generate_authorization_url)
-generate_authorization_url  # unused method
