@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 from app.schemas.config import TabConfig
 from app.schemas.status import StatusPayload, StatusState
 from app.services.config_service import ConfigService
+from app.services.sse_connection_manager import BROADCAST_TARGET, Target
 from app.services.tab_status_service import TabStatusService
 
 
@@ -40,7 +41,7 @@ def test_emit_updates_state_and_broadcasts():
 
     assert service.current(0).state == StatusState.RESTARTING
     mock_sse.send_event.assert_called_with(
-        None,
+        BROADCAST_TARGET,
         {"tab_index": 0, "state": "restarting", "message": None},
         "tab_status",
         "status",
@@ -55,7 +56,7 @@ def test_emit_with_message():
     assert service.current(0).state == StatusState.ERROR
     assert service.current(0).message == "something broke"
     mock_sse.send_event.assert_called_with(
-        None,
+        BROADCAST_TARGET,
         {"tab_index": 0, "state": "error", "message": "something broke"},
         "tab_status",
         "status",
@@ -73,13 +74,13 @@ def test_on_client_connect_sends_current_state():
 
     assert mock_sse.send_event.call_count == 2
     mock_sse.send_event.assert_any_call(
-        "req-123",
+        Target.connection("req-123"),
         {"tab_index": 0, "state": "running", "message": None},
         "tab_status",
         "status",
     )
     mock_sse.send_event.assert_any_call(
-        "req-123",
+        Target.connection("req-123"),
         {"tab_index": 1, "state": "error", "message": "broken"},
         "tab_status",
         "status",

@@ -6,7 +6,11 @@ import logging
 
 from app.schemas.status import StatusPayload, StatusState
 from app.services.config_service import ConfigService
-from app.services.sse_connection_manager import SSEConnectionManager
+from app.services.sse_connection_manager import (
+    BROADCAST_TARGET,
+    SSEConnectionManager,
+    Target,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +35,13 @@ class TabStatusService:
         """Record and broadcast a new status payload to all connected clients."""
         self._last[idx] = payload
         event_data = {"tab_index": idx, "state": payload.state.value, "message": payload.message}
-        self._sse.send_event(None, event_data, "tab_status", "status")
+        # A tab's state is the one shared state of a cluster deployment, which
+        # every signed-in user watches, whoever asked for the restart. So every
+        # connection is the narrowest target that reaches them.
+        self._sse.send_event(BROADCAST_TARGET, event_data, "tab_status", "status")
 
     def _on_client_connect(self, request_id: str) -> None:
         """Send current status for ALL tabs to a newly connected client."""
         for idx, payload in enumerate(self._last):
             event_data = {"tab_index": idx, "state": payload.state.value, "message": payload.message}
-            self._sse.send_event(request_id, event_data, "tab_status", "status")
+            self._sse.send_event(Target.connection(request_id), event_data, "tab_status", "status")
