@@ -46,11 +46,17 @@ pipeline {
                     // the SSE gateway per worker.
                     modernApp.test(
                         job: 'zigbee-control-validation',
-                        install: 'poetry install --no-interaction --without dev',
-                        run: 'poetry run',
+                        install: 'uv sync --locked --no-dev',
+                        run: 'uv run --no-sync',
                         suites: ['backend', 'frontend'],
                         services: [],
-                        env: [:],
+                        env: [
+                            // CI is the tst tier; under testing STAGE would default to local-tst.
+                            STAGE: 'tst',
+                            // The library fixes run-suite's flags, so the suite runner's pnpm store
+                            // cache is switched on here instead of with --build-cache.
+                            BUILD_CACHE: 'true',
+                        ],
                         secrets: [],
                     )
                 }
