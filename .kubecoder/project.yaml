@@ -2,8 +2,8 @@
 # build | test | lint` runs, and the AI workflow's merge gate.
 #
 # Everything needing a language toolchain is `cexec modern-app`-prefixed: the dev
-# container carries neither poetry nor pnpm. None of these lines is called by CI —
-# Jenkins runs the same two suites through `poetry run run-suite`
+# container carries neither uv nor pnpm. None of these lines is called by CI —
+# Jenkins runs the same two suites through `uv run --no-sync run-suite`
 # (tools/suite_runner) — so the prefixes are safe here.
 #
 # Neither Dockerfile is wired into `build:`. Both images are CI's
@@ -14,14 +14,14 @@ projects:
   root:
     description: >-
       ZigbeeControl monorepo — orchestration tooling (the suite runner behind
-      `poetry run run-suite`), the shared Procfile.dev dev stack, and CI.
+      `uv run run-suite`), the shared Procfile.dev dev stack, and CI.
     # The build/validation/deploy job. `AaC/ZigbeeControl` (Jenkinsfile.architecture)
     # is the repo's second job and validates the docs/architecture/*.yaml producers.
     jenkins: ZigbeeControl
-    setup: cexec modern-app poetry install --no-interaction
+    setup: cexec modern-app uv sync --locked
     # No test: the root project is honcho plus the suite runner and ships no suite.
     # The root's own Python, pinned in pyproject.toml; the components lint themselves.
-    lint: cexec modern-app poetry run ruff check scripts tools
+    lint: cexec modern-app uv run ruff check scripts tools
 
   backend:
     description: >-
@@ -29,20 +29,20 @@ projects:
       configuration, triggers Kubernetes rollout restarts for restartable tabs, and
       streams live deployment status to the UI through the SSE gateway.
     setup:
-      - cexec modern-app poetry install --no-interaction
+      - cexec modern-app uv sync --locked
       # `.env` is gitignored, so a fresh clone has none — and outside FLASK_ENV=testing
       # the app will not start without APP_TABS_CONFIG (app/app_config.py raises when
       # the tabs file is missing). Seed the checked-in sample tabs config, which is
       # what frontend/.env.example already points development at. An existing .env is
       # left untouched.
       - test -f .env || printf 'APP_TABS_CONFIG=test/tabs.yaml\n' > .env
-    test: cexec modern-app poetry run pytest
-    # `poetry run check` also runs pytest; lint calls the checkers directly so
+    test: cexec modern-app uv run pytest
+    # `uv run check` also runs pytest; lint calls the checkers directly so
     # linting and testing stay separate gates.
     lint:
-      - cexec modern-app poetry run ruff check .
-      - cexec modern-app poetry run mypy .
-      - cexec modern-app poetry run vulture app/ vulture_whitelist.py --min-confidence 80
+      - cexec modern-app uv run ruff check .
+      - cexec modern-app uv run mypy .
+      - cexec modern-app uv run vulture app/ vulture_whitelist.py --min-confidence 80
 
   frontend:
     description: >-

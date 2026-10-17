@@ -12,11 +12,11 @@ Backend service exposing configuration, restart controls, and status streaming f
    bindings, `FLASK_ENV` (`development` or `production`) and the `OIDC_*` settings.
 3. Start the whole dev stack — backend on :3201, frontend on :3200, SSE gateway on
    :3202 — with `scripts/dev.py` from the repository root. To run this service on its
-   own, from `backend/` (poetry lives in the `modern-app` tool container, not the dev
+   own, from `backend/` (uv lives in the `modern-app` tool container, not the dev
    container):
 
 ```bash
-cexec modern-app poetry run dev
+cexec modern-app uv run dev
 ```
 
 In production mode (`FLASK_ENV=production`) the service is served by Waitress; development mode keeps the Flask reloader/debugger enabled.

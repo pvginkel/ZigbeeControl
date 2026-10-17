@@ -11,7 +11,7 @@ environment is production.
 Three components, as `kc project list` reports them:
 
 - **`root`** — the honcho dev stack (`Procfile.dev`, `scripts/dev.py`), the suite runner behind
-  `poetry run run-suite` that CI calls, and the Jenkinsfiles. Ships no suite.
+  `uv run run-suite` that CI calls, and the Jenkinsfiles. Ships no suite.
 - **`backend/`** — Flask, layered `api/` → `services/` → `schemas/` → `utils/`, with DI. Serves tab
   config, triggers rollout restarts, streams status. pytest under `backend/tests/`.
 - **`frontend/`** — React 19 + TypeScript + Vite + TanStack, with an OpenAPI client generated from
@@ -25,10 +25,10 @@ sessions work in the same tree, so stage by name.
 ## Running it
 
 Everything needing a toolchain runs in the `modern-app` sidecar, via `cexec`; the dev container has
-neither poetry nor pnpm. Run every `kc project` verb from the repo root — the CLI is cwd-bound.
+neither uv nor pnpm. Run every `kc project` verb from the repo root — the CLI is cwd-bound.
 
 ```bash
-kc project setup                 # poetry + pnpm install, Playwright chromium, seeds both .env files
+kc project setup                 # uv + pnpm install, Playwright chromium, seeds both .env files
 kc project build                 # frontend build (the only component that builds)
 kc project test                  # backend pytest + frontend Playwright
 kc project lint                  # root ruff; backend ruff + mypy + vulture; frontend eslint +

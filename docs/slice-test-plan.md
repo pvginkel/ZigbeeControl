@@ -40,7 +40,7 @@ here means the slice never should have reached this phase.
 **`kc project lint` must be green** — every component, every statement. No gate in this repo is
 known red, so a lint failure here is this slice's and blocks. The backend's 36 pre-existing mypy
 errors are paid off: the strict profile `backend/pyproject.toml` declares is met in full, and the
-backend's own `cexec modern-app poetry run check` is green with it. `root` lints `scripts/` and
+backend's own `cexec modern-app uv run check` is green with it. `root` lints `scripts/` and
 `tools/` with `ruff`, on the rule set the root `pyproject.toml` pins so the gate does not float
 with the toolchain image.
 
@@ -56,7 +56,7 @@ a PID namespace, which is right for a human at a terminal and unkillable from a 
 
 ```bash
 mkdir -p logs
-nohup cexec modern-app poetry run honcho -f Procfile.dev start > logs/dev-stack.log 2>&1 &
+nohup cexec modern-app uv run honcho -f Procfile.dev start > logs/dev-stack.log 2>&1 &
 ```
 
 All three ports answer in about two seconds. Then:
@@ -140,7 +140,7 @@ operator — it does not claim the build passed.
 This is a **did-I-break-CI check, not a verification gate** — the slice was already proven in steps
 1–2. What it catches is the class of failure only CI can see: both Dockerfiles building end to end,
 and the image pins landing in Zigbee2mqttDeploy. Jenkins runs the same two suites this phase
-already ran, through `poetry run run-suite`, so a suite failure there means something environment-shaped, not a new bug.
+already ran, through `uv run --no-sync run-suite`, so a suite failure there means something environment-shaped, not a new bug.
 A red build is a blocking finding even though every local check passed — and because the deploy
 stage is last, a red build usually means production is still on the previous image.
 

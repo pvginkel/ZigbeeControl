@@ -60,13 +60,13 @@ kc project test    # this pytest suite, plus the frontend Playwright suite
 ```
 
 Or run individual tools from `backend/`. They live in the `modern-app` tool
-container — the dev container has no poetry:
+container — the dev container has no uv:
 ```bash
-cexec modern-app poetry run check                                           # ruff, mypy, vulture and pytest
-cexec modern-app poetry run ruff check .                                    # Linting
-cexec modern-app poetry run mypy .                                          # Type checking
-cexec modern-app poetry run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
-cexec modern-app poetry run pytest                                          # Full test suite
+cexec modern-app uv run check                                               # ruff, mypy, vulture and pytest
+cexec modern-app uv run ruff check .                                        # Linting
+cexec modern-app uv run mypy .                                              # Type checking
+cexec modern-app uv run vulture app/ vulture_whitelist.py --min-confidence 80  # Dead code detection
+cexec modern-app uv run pytest                                              # Full test suite
 ```
 
 ## Developer Workflow Checklist
