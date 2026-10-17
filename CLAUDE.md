@@ -11,7 +11,8 @@ environment is production.
 Three components, as `kc project list` reports them:
 
 - **`root`** — the honcho dev stack (`Procfile.dev`, `scripts/dev.py`), the suite runner behind
-  `uv run run-suite` that CI calls, and the Jenkinsfiles. Ships no suite.
+  `uv run run-suite` that CI calls, the `Jenkinsfile`, and the `Jenkinsfile.architecture` that
+  publishes the architecture model. Ships no suite.
 - **`backend/`** — Flask, layered `api/` → `services/` → `schemas/` → `utils/`, with DI. Serves tab
   config, triggers rollout restarts, streams status. pytest under `backend/tests/`.
 - **`frontend/`** — React 19 + TypeScript + Vite + TanStack, with an OpenAPI client generated from
@@ -39,6 +40,12 @@ scripts/dev.py                   # the dev stack: frontend :3200, backend :3201,
 `backend/.env` and `frontend/.env` are git-ignored and seeded by `kc project setup`; a fresh clone
 has neither, and the backend refuses to start without `APP_TABS_CONFIG` outside `FLASK_ENV=testing`.
 
+The root and `backend/` are two uv projects, each with its own committed `uv.lock`, because CI and
+the image sync `--locked`. `scripts/dev.py stop` stops the dev stack from another shell. A backend
+test fails while the committed OpenAPI cache is stale.
+`cexec modern-app python3 scripts/check_updates.py` reports the dependencies with a newer release,
+major, minor and patch, in every component it finds.
+
 ## Design philosophy
 
 The full rules are in [`docs/change-discipline.md`](docs/change-discipline.md), and every dev agent
@@ -61,6 +68,20 @@ secrets, internal hostnames or non-public names in the tree.
   behaviour.
 - `.kubecoder/config.yaml` and `.kubecoder/project.yaml` — the environment and the curated
   automation, both commented in place.
+
+## Architecture model
+
+ZigbeeControl is a producer in the estate's federated architecture model. Its two models are
+hand-authored, the backend's in `backend/docs/architecture/*.yaml` and the frontend's in
+`frontend/docs/architecture/*.yaml`. `Jenkinsfile.architecture`, the job `AaC/ZigbeeControl`,
+validates each against the architecture service on every push and archives them for AaC/Architecture
+to collect.
+
+The model is kept current centrally, not from here: the central architecture update in
+`pvginkel/Architecture` (`tooling/fleet.py update`) reads the commits since the model last changed
+and commits what they change in it. Nothing needs to run here after a change.
+
+`Jenkinsfile.architecture` is the app's own, and `copier update` leaves it alone.
 
 ## No gate is knowingly red
 
