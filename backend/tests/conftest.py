@@ -5,6 +5,7 @@ conftest_infrastructure.py. This file re-exports them and adds app-specific
 domain fixtures.
 """
 
+import os
 import textwrap
 from pathlib import Path
 
@@ -16,6 +17,14 @@ from app.utils.config_loader import load_tabs_config
 
 # Import all infrastructure fixtures
 from tests.conftest_infrastructure import *  # noqa: F403
+
+# A process the suite starts builds the app from the environment, not from the
+# fixtures below (test_openapi_cache.py builds one for its OpenAPI document), and
+# the app needs a tabs config to start. Where .env names none, as in CI, it gets
+# the one the Playwright backends use.
+os.environ.setdefault(
+    "APP_TABS_CONFIG", str(Path(__file__).resolve().parent.parent / "test" / "tabs.yaml")
+)
 
 
 @pytest.fixture
