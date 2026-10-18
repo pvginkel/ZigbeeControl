@@ -20,8 +20,16 @@ projects:
     jenkins: ZigbeeControl
     setup: cexec modern-app uv sync --locked
     # No test: the root project is honcho plus the suite runner and ships no suite.
-    # The root's own Python, pinned in pyproject.toml; the components lint themselves.
-    lint: cexec modern-app uv run ruff check scripts tools
+    # The root's own Python, and the architecture models; the components lint
+    # themselves.
+    lint:
+      # The rule set and the Ruff version are pinned in the root pyproject.toml.
+      - cexec modern-app uv run ruff check scripts tools
+      # The two models AaC/ZigbeeControl validates (Jenkinsfile.architecture), the
+      # backend's and the frontend's; arch-validate submits each file on its own.
+      # It exits 0 valid, 1 invalid, 2 transport: a 2 is the architecture
+      # service, not this repository.
+      - "if ls backend/docs/architecture/*.yaml frontend/docs/architecture/*.yaml >/dev/null 2>&1; then cexec aac-tools arch-validate backend/docs/architecture/*.yaml frontend/docs/architecture/*.yaml; else echo 'No architecture model in backend/docs/architecture/ and frontend/docs/architecture/'; fi"
 
   backend:
     description: >-

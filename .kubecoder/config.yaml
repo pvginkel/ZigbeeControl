@@ -34,6 +34,9 @@ repos:
 # so a single command needs both toolsets in the same container.
 tools:
   - use: modern-app
+  # arch-validate, for the architecture models' lint step (project.yaml); the
+  # AaC/ZigbeeControl job runs the same command.
+  - use: aac-tools
 
 ports:
   - name: frontend

@@ -32,8 +32,8 @@ neither uv nor pnpm. Run every `kc project` verb from the repo root — the CLI 
 kc project setup                 # uv + pnpm install, Playwright chromium, seeds both .env files
 kc project build                 # frontend build (the only component that builds)
 kc project test                  # backend pytest + frontend Playwright
-kc project lint                  # root ruff; backend ruff + mypy + vulture; frontend eslint +
-                                 # tsc + knip
+kc project lint                  # root ruff + arch-validate; backend ruff + mypy + vulture;
+                                 # frontend eslint + tsc + knip
 scripts/dev.py                   # the dev stack: frontend :3200, backend :3201, SSE gateway :3202
 ```
 
@@ -75,7 +75,7 @@ ZigbeeControl is a producer in the estate's federated architecture model. Its tw
 hand-authored, the backend's in `backend/docs/architecture/*.yaml` and the frontend's in
 `frontend/docs/architecture/*.yaml`. `Jenkinsfile.architecture`, the job `AaC/ZigbeeControl`,
 validates each against the architecture service on every push and archives them for AaC/Architecture
-to collect.
+to collect; `kc project lint` validates them too (`arch-validate`, in the `aac-tools` sidecar).
 
 The model is kept current centrally, not from here: the central architecture update in
 `pvginkel/Architecture` (`tooling/fleet.py update`) reads the commits since the model last changed
