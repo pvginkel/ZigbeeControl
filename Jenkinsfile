@@ -41,9 +41,6 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // No data sidecars: the backend keeps no database and reaches Zigbee2MQTT
-                    // through the Kubernetes API, and the Playwright harness boots the backend and
-                    // the SSE gateway per worker.
                     modernApp.test(
                         job: 'zigbee-control-validation',
                         install: 'uv sync --locked --no-dev',
