@@ -97,14 +97,12 @@ cookie is then required and `/api/auth/self` answers with a synthetic `local-use
   - `409 Conflict` if a restart for the deployment is already in progress.
   - `500 Internal Server Error` for unexpected Kubernetes or configuration issues.
 
-### GET `/api/status/<idx>/stream`
-- **Description:** Server-Sent Events stream that emits status updates for tab `<idx>`, interleaved with lightweight `event: heartbeat` frames when no state changes occur.
-- **Usage:** Subscribe via an `EventSource` in the browser or any SSE-capable client. Example event payload:
+### GET `/api/sse/stream?request_id=<id>`
+- **Description:** The browser's Server-Sent Events stream, which the frontend's SharedWorker holds open, one per browser. It opens with a `ready` event; tab status then arrives on it as `tab_status` messages, every tab's change on the one stream. Example frame:
   ```text
-  retry: 3000
-  event: status
-  data: {"state": "running", "message": null}
+  data: {"type":"tab_status","payload":{"tab_index":0,"state":"running","message":null}}
 
   ```
-- **Initial behaviour:** The latest known state (`running`, `restarting`, or `error`) is sent immediately upon connection.
-- **Heartbeat:** The backend sends `event: heartbeat` frames every `SSE_HEARTBEAT_INTERVAL` seconds (5 in development, forced to 30 in production) so intermediaries such as Waitress can notice disconnected clients.
+- **Initial behaviour:** After `ready`, the latest known state (`running`, `restarting`, or `error`) of every tab.
+- **Heartbeat:** A `: heartbeat` comment after `SSE_HEARTBEAT_INTERVAL` seconds idle (5 in development, forced to 30 in production), which is also how the backend notices a browser that has gone.
+- **Refusals:** Answered `200` with one `rejected` event, `{"status": 400|401|403, "message": ...}`, and the stream ends: a missing `request_id` is a `400`, a caller without a valid session a `401`, one without the app's roles a `403`.
