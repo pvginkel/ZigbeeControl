@@ -3,8 +3,8 @@ producer: zigbee-control
 
 # Single-page web UI for the Zigbee2MQTT multi-instance control panel (Z2M
 # Wrapper). A React/Vite SPA served as static assets by nginx; it consumes the
-# Zigbee Control backend API and subscribes to the in-house SSE gateway for live
-# tab status. Its primary purpose is to WRAP three other web UIs deployed
+# Zigbee Control backend API, the SSE stream that carries live tab status
+# included. Its primary purpose is to WRAP three other web UIs deployed
 # alongside it by the zigbee2mqtt helm chart — two Zigbee2MQTT instances
 # (zigbee2mqtt1, zigbee2mqtt2) and a Code Server — adding minimal control
 # function. Those three are upstream products deployed by helm-charts; modeled
@@ -20,7 +20,7 @@ applicationComponents:
     summary: >-
       React/Vite single-page web UI for the Zigbee2MQTT control panel. Renders
       the tab shell, triggers Kubernetes rollout restarts via the backend, and
-      reflects live deployment status streamed from the SSE gateway.
+      reflects live deployment status streamed from the backend.
     introduced: 2025-09-27
     lifecycle: active
     stereotype: SoftwareProduct
@@ -80,23 +80,14 @@ relations:
     target: svc:zigbee-control-ui-web,13c8cfe4-27ab-47fb-bae7-035d08176913
     type: Assignment
 
-  # Frontend -> backend: the SPA consumes the Zigbee Control backend API
-  # (resolved from the backend artifact of the same zigbee-control producer).
+  # Frontend -> backend: the SPA consumes the Zigbee Control backend API, the
+  # SSE stream of live tab status (/api/sse/stream) included (resolved from the
+  # backend artifact of the same zigbee-control producer).
   # Reached via the same-origin relative path /api/ proxied by the frontend
   # half's nginx — no env var, so no boundBy.
   - id: rel:zigbee-control-ui-consumes-api
     source: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
     target: svc:zigbee-control-api,ce8d7938-5d7d-4eee-abab-294cf19315e7
-    type: Association
-
-  # Frontend -> SSE gateway: the SPA subscribes to the in-house SSE gateway's
-  # browser client stream (/api/sse/stream) for live tab status. Reached via the
-  # same-origin relative path proxied by the frontend half's nginx to the
-  # gateway sidecar — no env var, so no boundBy. Cross-producer svc from the
-  # ssegateway artifact.
-  - id: rel:zigbee-control-ui-consumes-sse-gateway
-    source: app:zigbee-control-ui,880df297-2b73-4198-8f92-028d84118be9
-    target: svc:ssegateway,59a7d043-bb0c-4e44-a8b8-3e943338f807
     type: Association
 
   # The app wraps the three sibling web UIs (two Z2M instances + code-server),
