@@ -10,11 +10,10 @@ persisted state.
 ## Layout
 
 - **`backend/`** — Flask. Serves the tab configuration, triggers the rollout restarts and publishes
-  the status events. OIDC authentication, off by default in development.
+  the status events to the browsers over its own SSE stream. OIDC authentication, off by default
+  in development.
 - **`frontend/`** — React 19 + TypeScript + Vite, with an API client generated from the backend's
   OpenAPI spec, covered end to end by Playwright.
-- The dev stack also runs an **SSE gateway**, which fans the backend's status events out to connected
-  browsers. It ships as a frontend devDependency, so there is nothing extra to check out.
 
 ## Building and running
 
@@ -26,7 +25,7 @@ kc project setup    # install dependencies and seed the .env files
 kc project build    # build the frontend
 kc project test     # backend pytest, frontend Playwright
 kc project lint     # ruff, mypy and vulture; eslint, tsc and knip
-scripts/dev.py      # the dev stack: frontend :3200, backend :3201, SSE gateway :3202
+scripts/dev.py      # the dev stack: frontend :3200, backend :3201
 ```
 
 ## More

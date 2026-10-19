@@ -2,8 +2,8 @@
 #
 # The repo has no data sidecars: the backend fronts Zigbee2MQTT deployments through
 # the Kubernetes API and keeps no database, and the Playwright harness boots the
-# backend and the SSE gateway per worker. So this file only asks for the toolchain,
-# the spec repo and the three dev ports.
+# backend per worker. So this file only asks for the toolchain, the spec repo and
+# the two dev ports.
 #
 # No `imageBuilder:` either — both images (backend/Dockerfile, frontend/Dockerfile)
 # are built by CI with helmCharts.kaniko2, and nothing builds them from inside here.
@@ -45,7 +45,4 @@ ports:
     sslOffload: true
   - name: backend
     port: 3201
-    type: http
-  - name: sse-gateway
-    port: 3202
     type: http

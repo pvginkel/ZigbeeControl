@@ -47,8 +47,8 @@ with the toolchain image.
 ## 2. The live check
 
 Boot the dev stack the way this repo does — honcho over `Procfile.dev`, inside the `modern-app`
-sidecar — and probe the three ports `.kubecoder/config.yaml` publishes: frontend 3200, backend 3201,
-SSE gateway 3202. Do this whenever the slice touched `backend/`, `frontend/`, `Procfile.dev` or
+sidecar — and probe the two ports `.kubecoder/config.yaml` publishes: frontend 3200, backend 3201
+(which serves the SSE stream too). Do this whenever the slice touched `backend/`, `frontend/`, `Procfile.dev` or
 `scripts/`; a docs-only slice can skip to step 3 and say so.
 
 Run honcho directly rather than through `scripts/dev.py`: the wrapper spawns honcho under a pty and
@@ -59,12 +59,12 @@ mkdir -p logs
 nohup cexec modern-app uv run honcho -f Procfile.dev start > logs/dev-stack.log 2>&1 &
 ```
 
-All three ports answer in about two seconds. Then:
+Both ports answer in about two seconds. Then:
 
 ```bash
 for u in http://localhost:3200/ http://localhost:3200/api/config \
          http://localhost:3200/version.json \
-         http://localhost:3201/health/readyz http://localhost:3202/readyz; do
+         http://localhost:3201/health/readyz; do
   printf '%-40s ' "$u"; curl -sS -o /dev/null -w '%{http_code}\n' --max-time 10 "$u"
 done
 curl -sk -o /dev/null -w '%{http_code}\n' "https://frontend.$KUBECODER_ENVIRONMENT_ID.home/"
@@ -77,7 +77,7 @@ actually reachable from outside the pod. Add whatever else the slice's own crite
 ### Stopping it
 
 **Send `SIGINT` to honcho itself, by pid.** Killing the `cexec` client instead takes honcho down
-without its shutdown cascade and leaves Vite, Flask and the gateway holding all three ports — that
+without its shutdown cascade and leaves Vite and Flask holding both ports — that
 was observed here, and cleaning it up is manual.
 
 ```bash
@@ -90,10 +90,10 @@ Two things about that selector. The pod shares one PID namespace, so `ps` in the
 this container's processes — including **your own command line**, which is why `pgrep -f honcho`
 self-matches and returns a pid that is not honcho. The `$3 ~ /^\/` test keeps only processes whose
 argv[0] is an absolute path, which excludes both your shell and the `cexec` client. `sort -n | head
--1` then picks honcho's parent over its three per-line children.
+-1` then picks honcho's parent over its two per-line children.
 
 honcho exits in about a second, logging `sending SIGTERM` per process to `logs/dev-stack.log`.
-Confirm the three ports are free and no stragglers remain
+Confirm both ports are free and no stragglers remain
 (`cexec modern-app ps -eo pid,args --no-headers`), then confirm `git status --short` is clean —
 `logs/` is git-ignored, but the tree must go back to how it started.
 

@@ -69,7 +69,7 @@ not a substitute — the point of the test is that it runs again next time.
 | `frontend` | Playwright E2E, under `frontend/tests/` | `kc project test --project frontend` |
 | `root` | none — honcho and the suite runner ship no suite | green by definition |
 
-The Playwright suite boots a real backend and a real SSE gateway per worker
+The Playwright suite boots a real backend and frontend per worker
 (`frontend/tests/support/process/servers.ts`), so a frontend change is proven against the actual
 API, not a mock. Kubernetes is the one thing that is faked: pytest injects a fake `AppsV1Api` and
 the E2E suite never clicks Restart — it drives the UI's restart handling by pushing tab statuses

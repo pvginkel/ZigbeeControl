@@ -16,8 +16,8 @@ Three components, as `kc project list` reports them:
 - **`backend/`** — Flask, layered `api/` → `services/` → `schemas/` → `utils/`, with DI. Serves tab
   config, triggers rollout restarts, streams status. pytest under `backend/tests/`.
 - **`frontend/`** — React 19 + TypeScript + Vite + TanStack, with an OpenAPI client generated from
-  the backend's spec. Playwright E2E under `frontend/tests/`, which boots a real backend and SSE
-  gateway per worker.
+  the backend's spec. Playwright E2E under `frontend/tests/`, which boots a real backend per
+  worker.
 
 Slices, plans and run state live in **`../ZigbeeControlSpecs`** — a separate, private git repo,
 shared between environments. Commit there early and often, and separately from this repo; parallel
@@ -34,7 +34,7 @@ kc project build                 # frontend build (the only component that build
 kc project test                  # backend pytest + frontend Playwright
 kc project lint                  # root ruff + arch-validate; backend ruff + mypy + vulture;
                                  # frontend eslint + tsc + knip
-scripts/dev.py                   # the dev stack: frontend :3200, backend :3201, SSE gateway :3202
+scripts/dev.py                   # the dev stack: frontend :3200, backend :3201
 ```
 
 `backend/.env` and `frontend/.env` are git-ignored and seeded by `kc project setup`; a fresh clone

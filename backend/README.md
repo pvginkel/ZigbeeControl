@@ -10,10 +10,9 @@ Backend service exposing configuration, restart controls, and status streaming f
    file outside `FLASK_ENV=testing`. An existing `.env` is never overwritten.
 2. To go further, copy `.env.example` over it and set `APP_TABS_CONFIG`, network
    bindings, `FLASK_ENV` (`development` or `production`) and the `OIDC_*` settings.
-3. Start the whole dev stack — backend on :3201, frontend on :3200, SSE gateway on
-   :3202 — with `scripts/dev.py` from the repository root. To run this service on its
-   own, from `backend/` (uv lives in the `modern-app` tool container, not the dev
-   container):
+3. Start the whole dev stack — backend on :3201, frontend on :3200 — with
+   `scripts/dev.py` from the repository root. To run this service on its own, from
+   `backend/` (uv lives in the `modern-app` tool container, not the dev container):
 
 ```bash
 cexec modern-app uv run dev

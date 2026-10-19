@@ -35,7 +35,7 @@ projects:
     description: >-
       Flask backend for the Zigbee2MQTT multi-instance control panel — serves tab
       configuration, triggers Kubernetes rollout restarts for restartable tabs, and
-      streams live deployment status to the UI through the SSE gateway.
+      streams live deployment status to the UI over SSE.
     setup:
       - cexec modern-app uv sync --locked
       # `.env` is gitignored, so a fresh clone has none — and outside FLASK_ENV=testing
@@ -56,7 +56,7 @@ projects:
     description: >-
       React 19 + TanStack Router/Query SPA wrapping the Zigbee2MQTT and Code Server
       web UIs, with a generated OpenAPI client; Playwright E2E suite that boots the
-      backend and the SSE gateway per worker.
+      backend per worker.
     setup:
       - cexec modern-app pnpm install --frozen-lockfile --config.confirmModulesPurge=false
       - cexec modern-app pnpm playwright install chromium
