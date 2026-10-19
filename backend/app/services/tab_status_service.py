@@ -1,4 +1,4 @@
-"""Tracks per-tab status and delivers events through SSE Gateway."""
+"""Tracks per-tab status and delivers events over SSE."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class TabStatusService:
-    """Publishes per-tab status updates via SSE Gateway."""
+    """Publishes per-tab status updates over SSE."""
 
     def __init__(self, config_service: ConfigService, sse_connection_manager: SSEConnectionManager) -> None:
         self._sse = sse_connection_manager
